@@ -21,7 +21,7 @@ Snapshot date: 2026-10-22. Based on command output in the troubleshooting sessio
 | Direct node ID | `_direct` |
 | Node UCI setting | `passwall2.rulenode.default_node` |
 | Watchdog UCI section | `ha_watchdog.main` |
-| Mode | `auto` |
+| Mode | `primary` (latest confirmed; manual pin) |
 | Last observed route | `PusiSLgE` |
 | Last observed HA status | `primary` |
 | Core script | `/usr/bin/passwall2-failover-core` |
@@ -35,17 +35,16 @@ The service reported `running`, and boot links `S99passwall2-failover-watchdog` 
 
 ## Latest observed probe results
 
-- Primary: `204:0.320248` (example recent result); success counter capped at 3; failure counter 0.
-- Backup: `204:0.332126` (example recent result); success counter capped at 3; failure counter 0.
-- Logs appeared about 17–18 seconds apart for a full pair of tests.
+- The latest metrics-only test showed primary `204:0.353328` and backup `204:0.352807`; both were online with 0 consecutive failures.
+- Another cycle showed primary `204:0.373957` and backup `204:0.323430`, again with 0 failures.
+- Manual-mode metrics logs were observed about 15 seconds apart in this short sample.
 - The normal HTTP probe target is configured via PassWall2's `url_test_url` setting, default shown by script as `https://www.google.com/generate_204`.
 
 ## Boot/autostart verification — 2026-10-22
 
 - `/etc/rc.d/S99passwall2-failover-watchdog` and `K10...` links were present; after reboot the service reported `running`.
 - The mode persisted as `primary`, so the service's wrapper forced the primary route and skipped health probes. This was expected manual-mode behavior, not proof of a failed autostart.
-- After the mode helper was changed to `Авто`, UCI reported `auto`, route `PusiSLgE`, status `primary`, and recent log lines showed both probes returning HTTP `204` with `ok=3 fail=0` and `p_fail=b_fail=0`.
-- Recent full cycle output times were roughly 10–11 seconds apart.
+- The user subsequently selected the manual `primary` mode. The wrapper pins the primary route; telemetry was initially absent because manual branches exit before the core.
 
 ## Design caveat — node IDs are hard-coded
 
@@ -84,3 +83,13 @@ A controlled test where both endpoints fail and then recover has not been done. 
 - [Firewall](FIREWALL.md)
 - [Home Assistant](HOME-ASSISTANT.md)
 - [Backups](BACKUPS.md)
+
+
+## Metrics-only telemetry — 2026-10-22
+
+- Created `/etc/config/ha_watchdog_metrics` with UCI section `ha_watchdog_metrics.nodes` and fields `primary_result`, `primary_ok`, `primary_failures`, `primary_rtt_ms`, `primary_checked_at`, matching backup fields, and `last_check`.
+- Publisher script: `/usr/bin/passwall2-watchdog-publish-metrics`. It translates a PassWall2 result such as `204:0.353328` to online state, HTTP result, rounded latency in milliseconds, consecutive failure count, and timestamp. It uses UCI staged changes without `uci commit` to avoid continuous flash writes.
+- Added `/usr/bin/passwall2-watchdog-probe-metrics` for manual modes. It uses separate counter files prefixed `metric_` and never changes the selected PassWall2 route.
+- Updated the watchdog loop: in `primary`, `backup`, or `off`, it runs the metrics-only checker after the wrapper; in `auto`, the core's existing probe/publish path remains responsible for metrics. The randomized 5–15 second pause remains.
+- Validation: publisher produced `primary_ok=online`, `backup_ok=online`, RTT `392`/`438` ms in a manual test; subsequent automated logs showed both nodes returning HTTP `204`, with counters 0. `/etc/init.d/passwall2-failover-watchdog status` returned `running` after restart.
+- Latest observed UCI: mode `primary`, route `PusiSLgE`. Home Assistant dashboard entity creation is still pending. Metrics values are not committed to flash each cycle, so the live values are volatile and reset to configured defaults after reboot until the next check.
