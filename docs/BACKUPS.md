@@ -44,3 +44,19 @@ sh -n /usr/bin/passwall2-failover-core
 ```
 
 This removes the guard against a long-running probe and is not recommended without a specific reason.
+
+
+## Telemetry gate backup — 2026-10-22
+
+A router-side backup was created before connecting the publication gate:
+
+- `/usr/bin/passwall2-failover-core.bak-before-metrics-throttle`
+
+The telemetry publisher was also backed up during the UCI delta/revert fix:
+
+- `/usr/bin/passwall2-watchdog-publish-metrics.bak-before-revert-fix`
+- `/tmp/ha_watchdog_metrics.uci-delta.bak` (runtime UCI delta backup; the old 48.8 KB delta was then reverted)
+
+The current publication-gate script is `/usr/bin/passwall2-watchdog-publish-due`. Its creation and connection to the core were syntax-checked, but the new auto-mode timing still needs runtime verification.
+
+Before restoring the core backup, inspect the exact file and confirm its compatibility with the currently installed publisher. Restoring the core alone can remove the throttled publication call; it should not affect the route logic except to restore the earlier core version.
