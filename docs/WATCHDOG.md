@@ -105,6 +105,10 @@ uci -q get passwall2.rulenode.default_node
 
 The user rebooted the router. The displayed status initially showed direct connection, then later moved to the primary node automatically. This matches current logic: while current route is `_direct`, three consecutive successful primary probes trigger a switch to `PusiSLgE`. The exact event logs for the transition were not captured, so this is consistent with, rather than a packet-level proof of, the code path. A controlled outage test (primary down, fallback behavior, restore) is still pending.
 
+## Final post-reboot check
+
+A follow-up UCI check after the router reboot/recovery returned `ha_watchdog.main.mode=auto` and `passwall2.rulenode.default_node=PusiSLgE`. The route switched from direct to the primary node automatically and the watchdog remained in auto control mode.
+
 ## Controlled fail/recovery test — still pending
 
 Do not test a failure remotely unless you have local access to the router. The test should verify primary down -> backup, both down -> direct, and primary restored -> primary. Record timestamps and watchdog logs. Avoid making both nodes unavailable if remote management is your only access.
