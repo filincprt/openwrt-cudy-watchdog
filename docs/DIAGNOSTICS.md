@@ -31,7 +31,7 @@ logread | grep -Ei 'passwall2-failover|failover' | tail -n 80
 ## Manually test both nodes
 
 ```sh
-/usr/bin/timeout -k 2 10 /usr/share/passwall2/test.sh url_test_node PusiSLgE urltest_node
+/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node PusiSLgE urltest_node
 echo "EXIT_CODE=$?"
 /usr/bin/timeout -k 2 10 /usr/share/passwall2/test.sh url_test_node fAk268mE urltest_node
 echo "EXIT_CODE=$?"
@@ -55,3 +55,19 @@ ip -6 route show default
 ## Shell syntax
 
 OpenWrt build did not have `nl`; use `sed -n '1,150p' FILE` to inspect numbered ranges, or `grep -n` to locate matching lines.
+
+
+## Telemetry throttle
+
+In automatic mode, health probes continue every core cycle, but publication into UCI is limited by `passwall2-watchdog-publish-due` to a randomized 180–300 seconds.
+
+```sh
+cat /tmp/passwall2-failover-state/metrics_last_publish 2>/dev/null
+cat /tmp/passwall2-failover-state/metrics_interval 2>/dev/null
+uci -q get ha_watchdog_metrics.nodes.last_check
+uci -q get ha_watchdog_metrics.nodes.primary_summary
+uci -q get ha_watchdog_metrics.nodes.backup_summary
+logread -e passwall2-watchdog | tail -n 30
+```
+
+The files under `/tmp/passwall2-failover-state` are volatile and reset on reboot. A missing timestamp immediately after reboot can mean the first publication has not yet happened.
