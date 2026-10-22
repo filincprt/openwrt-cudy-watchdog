@@ -53,3 +53,13 @@
 - Logs showed some blank probe results and two consecutive cycles where both probes failed. The route did not change at failure count 2, as intended after the threshold increase.
 - Later, both probes repeatedly returned HTTP `204`, failure counters reset to zero, current route was `PusiSLgE`, and status was `primary` in mode `auto`.
 - User observed an automatic direct-to-primary recovery during this period. A controlled outage/recovery test remains pending.
+
+
+## 2026-10-22 — metrics telemetry in manual modes
+
+- Added UCI telemetry section `ha_watchdog_metrics.nodes`, publisher script reference, and metrics-only checker reference.
+- Added `/usr/bin/passwall2-watchdog-probe-metrics` for manual `primary`, `backup`, and `off` modes. It uses separate `metric_*` counter files and never changes the selected VPN route or automatic decision counters.
+- Updated watchdog loop so manual modes publish metrics; automatic mode continues to collect and publish from the core's regular probes. Random 5–15 second pause remains.
+- Backups created on router: `passwall2-failover-core.bak-before-metrics-only`, `passwall2-failover.bak-before-metrics-only`, and `passwall2-failover-loop.bak-before-metrics-mode`.
+- Validated helper directly: both nodes returned HTTP 204; UCI stored online states, RTT in milliseconds, zero failures, and timestamps. Confirmed the route remained `PusiSLgE` while mode was `primary`.
+- Restarted watchdog; service reported `running`. Logs contained repeated `Metrics-only primary/backup` messages approximately 15 seconds apart. HA dashboard display remains unfinished.
