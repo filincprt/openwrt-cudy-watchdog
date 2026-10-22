@@ -63,3 +63,14 @@
 - Backups created on router: `passwall2-failover-core.bak-before-metrics-only`, `passwall2-failover.bak-before-metrics-only`, and `passwall2-failover-loop.bak-before-metrics-mode`.
 - Validated helper directly: both nodes returned HTTP 204; UCI stored online states, RTT in milliseconds, zero failures, and timestamps. Confirmed the route remained `PusiSLgE` while mode was `primary`.
 - Restarted watchdog; service reported `running`. Logs contained repeated `Metrics-only primary/backup` messages approximately 15 seconds apart. HA dashboard display remains unfinished.
+
+
+## 2026-10-22 — telemetry throttling and documentation refresh
+
+- Added `passwall2-watchdog-publish-due.sh` reference. In automatic mode it allows telemetry UCI publication about every randomized 180–300 seconds while core health probes and failover decisions continue on every cycle.
+- Updated the loop reference: manual `primary`, `backup`, and `off` modes run the metrics-only probe every randomized 180–300 seconds; automatic mode retains the randomized 5–15 second pause after each completed core cycle.
+- Updated the core and manual metrics-only reference timeout from 10 to 15 seconds and changed the core's telemetry call to the throttle helper.
+- Added a reusable publisher reference with `uci revert ha_watchdog_metrics` before staging a fresh snapshot. Frequent metrics updates are not committed to flash.
+- Rewrote README as the project overview and linked deployment, troubleshooting, HA and AI handoff documents. Added `docs/DEPLOYMENT.md` and `docs/AI-PROMPT.md`.
+- Recorded that HA summaries are visible in the existing VPN dashboard and that current control mode was changed to `auto`; route was `PusiSLgE`.
+- This is a documentation/reference sync. Live route behavior and failover correctness still require a controlled outage/recovery test with local access available.
