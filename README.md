@@ -51,7 +51,8 @@ Current live schedule (2026-10-22):
 
 ## Repository map
 
-- [Deployment guide](docs/DEPLOYMENT.md) — cautious installation on OpenWrt with and without HA.
+- [Quick deployment overview](docs/DEPLOYMENT.md) — deployment stages and safety gates.
+- [Detailed install/adaptation guide](docs/INSTALL.md) — step-by-step setup with and without Home Assistant.
 - [Watchdog internals](docs/WATCHDOG.md) — decision logic, intervals, limitations.
 - [Home Assistant](docs/HOME-ASSISTANT.md) — helpers, UI automations, metrics and webhook safety.
 - [Current status](docs/STATUS.md) — last verified live state and unresolved tests.
