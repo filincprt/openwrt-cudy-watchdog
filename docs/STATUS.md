@@ -66,6 +66,14 @@ After the observed automatic recovery, a direct UCI check returned `ha_watchdog.
 - Logs after the change showed irregular cycle starts about 14–24 seconds apart. There were a few blank probe results, including two consecutive paired failures, but no failover at failure count 2. Later both nodes repeatedly returned HTTP `204`, with both failure counters at 0 and route `PusiSLgE`.
 - User observed one automatic return from direct to primary during this period. A controlled repeatable outage test has not been performed.
 
+## Latest watchdog tuning (2026-10-22)
+
+- Failure thresholds in core and wrapper are now 3 consecutive failed probe cycles (previously 2). The successful recovery threshold remains 3.
+- The watchdog loop uses BusyBox RANDOM to add a 5–15 second pause after each full cycle. Syntax checks passed for core, wrapper and loop; service status was running after restart.
+- Log times after the change were irregular, roughly 14–24 seconds apart. Some tests produced blank results for both nodes, with two consecutive paired failures, but the route remained on primary at failure count 2.
+- Later, repeated probes returned HTTP 204 for both nodes, both failure counters were 0, route was PusiSLgE, status primary, and mode auto. The user observed one automatic route recovery from direct to primary.
+- Root cause of the blank probe results is still unknown; controlled outage/recovery testing is pending.
+
 ## Important uncertainty
 
 A controlled test where both endpoints fail and then recover has not been done. Successful manual probes and repeated healthy logs do not by themselves prove every failure/recovery branch works. Test only while local access to LuCI or SSH is available.
