@@ -23,7 +23,7 @@ inc() {
 }
 
 probe() {
-    PROBE_RESULT="$(/usr/bin/timeout -k 2 10 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
+    PROBE_RESULT="$(/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
     case "$PROBE_RESULT" in
         2[0-9][0-9]:*|3[0-9][0-9]:*) return 0 ;;
         *) return 1 ;;
