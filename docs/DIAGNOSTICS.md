@@ -71,3 +71,28 @@ logread -e passwall2-watchdog | tail -n 30
 ```
 
 The files under `/tmp/passwall2-failover-state` are volatile and reset on reboot. A missing timestamp immediately after reboot can mean the first publication has not yet happened.
+
+
+## Telemetry cadence and current control mode
+
+```sh
+echo "MODE=$(uci -q get ha_watchdog.main.mode)"
+echo "ROUTE=$(uci -q get passwall2.rulenode.default_node)"
+/etc/init.d/passwall2-failover-watchdog status
+echo "LAST_PUBLISH=$(cat /tmp/passwall2-failover-state/metrics_last_publish 2>/dev/null)"
+echo "PUBLISH_INTERVAL=$(cat /tmp/passwall2-failover-state/metrics_interval 2>/dev/null)"
+echo "LAST_METRICS=$(uci -q get ha_watchdog_metrics.nodes.last_check)"
+logread -e passwall2-watchdog | tail -n 40
+logread -e passwall2-watchdog-metrics | tail -n 20
+```
+
+In auto mode, compare ordinary core probe log lines with changes to `last_check`: probes should continue on every cycle while the publication gate allows UCI metrics to update only every randomized 180–300 seconds. This behavior was connected and syntax-checked but still requires live cadence verification. In manual modes, the metrics-only probe itself runs on the 180–300 second loop schedule.
+
+The live core and manual metrics checker use `timeout -k 2 15`. A standalone test example:
+
+```sh
+/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node PRIMARY_NODE_ID urltest_node
+echo "EXIT_CODE=$?"
+```
+
+Replace the placeholder with a verified node ID. Do not publish actual subscription or credential-bearing config output.
