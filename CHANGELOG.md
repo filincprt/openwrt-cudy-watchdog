@@ -37,3 +37,8 @@
 - After a manual reboot, the route/status first appeared as direct connection, then switched to the primary node without a manual mode change.
 - This is consistent with early-boot node probes failing temporarily and the watchdog returning from `_direct` after three successful primary probes.
 - Exact transition logs were not provided, so the result is recorded as an observed behavior consistent with the watchdog logic, not as a full controlled outage test.
+
+## 2026-10-22 — post-recovery state confirmed
+
+- After reboot, route/status initially showed direct connection, then the watchdog returned to primary automatically.
+- Follow-up UCI checks confirmed mode `auto` and selected PassWall2 route `PusiSLgE`. The watchdog did not remain pinned in manual `primary` mode.
