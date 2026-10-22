@@ -15,7 +15,7 @@ Sanitized reference as of 2026-10-22. No working webhook token is included.
 UCI configuration on router:
 - `ha_watchdog.main.mode`: `auto`, `primary`, `backup`, or `off`.
 - `ha_watchdog.main.status`: `primary`, `backup`, `manual_off`, `direct`, `offline`, or `unknown`.
-- Latest observed `ha_watchdog.main.mode` is `primary`, selected route `PusiSLgE`.
+- Latest observed `ha_watchdog.main.mode` is `auto`, selected route `PusiSLgE` (confirmed 2026-10-22 after enabling automatic failover).
 - Wrapper webhook URL path is `/api/webhook/<REDACTED>`; do not copy the real token into this repository.
 
 ## Helper entities
@@ -62,4 +62,15 @@ OpenWrt publishes volatile UCI fields under `ha_watchdog_metrics.nodes`:
 | `primary_failures`, `backup_failures` | Consecutive failed probe count, capped at 3 |
 | `primary_checked_at`, `backup_checked_at`, `last_check` | Local router timestamp |
 
-Router-side telemetry was verified by reading `uci show ha_watchdog_metrics`; both probes returned HTTP 204 and counters were 0. Watchdog logs confirmed that telemetry refresh runs in manual mode after the service restart. The matching HA input/helper entities and dashboard cards have **not** been created yet. Next: verify the response shape returned by `openwrt.uci_get` in HA Developer Tools, then add a UI-only polling automation and helpers/cards to the existing VPN dashboard section.
+Router-side telemetry was verified by reading `uci show ha_watchdog_metrics`; both probes returned HTTP 204 and counters were 0. Watchdog logs confirmed that telemetry refresh runs in manual mode after the service restart. The existing VPN dashboard now shows two summaries through `input_text.passwall2_primary_metrics` and `input_text.passwall2_backup_metrics`. A UI-created polling automation reads the `primary_summary` and `backup_summary` UCI options through `openwrt.uci_get` every 30 seconds. The displayed summary timestamp is the time of the router probe, not the time the card was refreshed.
+
+
+## Confirmed telemetry display and publication throttle — 2026-10-22
+
+The two metric summaries were displayed in the existing VPN section:
+
+- Primary: online, HTTP 204, RTT 300 ms, failures 0.
+- Backup: online, HTTP 204, RTT 367 ms, failures 0.
+- Both checks were stamped `2026-10-22 22:37:42`.
+
+The router-side publisher uses UCI staged values, not a flash commit on each update. The `passwall2-watchdog-publish-due` helper now limits publication in automatic mode to a randomized 180–300 second interval. HA's 30-second polling does not itself create a VPN probe; it reads the already-published summary. Manual mode also performs metrics-only checks every randomized 180–300 seconds. Automatic mode still probes both nodes each core cycle.
