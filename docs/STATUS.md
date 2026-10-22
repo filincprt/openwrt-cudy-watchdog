@@ -86,3 +86,14 @@ The HTTP 204 probe only proves that the configured test request succeeded throug
 5. Plan a controlled outage/recovery test only when local LuCI/SSH access or another recovery path is available.
 
 Related: [Watchdog](WATCHDOG.md), [Home Assistant](HOME-ASSISTANT.md), [Diagnostics](DIAGNOSTICS.md), [Backups](BACKUPS.md).
+
+
+## Latest confirmed configuration — 2026-10-22, after telemetry throttle
+
+- User selected `Авто` in the existing HA mode helper. Direct UCI checks confirmed `ha_watchdog.main.mode=auto` and route `PusiSLgE`.
+- The live loop was changed so manual modes (`primary`, `backup`, `off`) perform metrics-only checks, then wait 180–300 seconds; automatic mode keeps the 5–15 second random pause after each core cycle.
+- The core's metrics call was changed from direct publisher invocation to `/usr/bin/passwall2-watchdog-publish-due`. Syntax checks passed for the live throttle helper and core. This preserves frequent health probes in auto mode while staging new telemetry into UCI about every 3–5 minutes.
+- The throttle tracks `metrics_last_publish` and `metrics_interval` in `/tmp/passwall2-failover-state`; these are volatile and reset on reboot. First auto-mode run may publish immediately.
+- The existing Home Assistant VPN section now shows `input_text.passwall2_primary_metrics` and `input_text.passwall2_backup_metrics`. Latest user-provided dashboard snapshot at 22:37:42 showed both nodes online, HTTP 204, 0 failures, RTT 300 ms primary / 367 ms backup.
+- The publisher runs `uci revert ha_watchdog_metrics` before setting current values. A bounded staged delta of 722 bytes was verified previously, avoiding repeated accumulation in `/tmp/.uci/ha_watchdog_metrics`.
+- Remaining important risks: node IDs remain hard-coded; no controlled outage/recovery test has been performed; earlier `no-response` results were not conclusively diagnosed; automatic mode probes still run every cycle and jitter does not guarantee protection against server blocking.
