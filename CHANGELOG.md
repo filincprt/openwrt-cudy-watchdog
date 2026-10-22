@@ -18,3 +18,10 @@
 - Found the UCI mode had persisted as `primary`, which bypasses health probes; changed mode to `auto` through the HA helper.
 - After switching to `auto`, repeated watchdog logs appeared every roughly 10–11 seconds. Both primary and backup probes returned HTTP `204`, counters showed `ok=3 fail=0`, and the selected route/status were `PusiSLgE` / `primary`.
 - Confirmed service boot autostart, but not a simulated outage + recovery sequence.
+
+## 2026-10-22 — documented Auto semantics and node-ID limitation
+
+- Clarified that `ha_watchdog.main.mode=auto` is the watchdog control mode, distinct from PassWall2's native URLTest/auto node group.
+- Documented that route recovery currently selects the hard-coded primary ID rather than a native Auto group.
+- Recorded that primary/backup IDs are duplicated as literals in the core and wrapper, so LuCI route changes are not adopted automatically and subscription node-ID changes may break assumptions.
+- Future improvement: resolve configured primary/backup roles dynamically (with missing/ambiguous-match safeguards) or intentionally redesign around a native PassWall2 URLTest group. No live router scripts were changed in this documentation update.
