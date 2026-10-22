@@ -59,6 +59,13 @@ After a manual reboot, the displayed route initially showed direct connection an
 
 After the observed automatic recovery, a direct UCI check returned `ha_watchdog.main.mode=auto` and `passwall2.rulenode.default_node=PusiSLgE`. This confirms the watchdog control mode remained automatic while the primary route was restored.
 
+## Jitter/threshold update — 2026-10-22
+
+- Core and wrapper failure thresholds using `-ge 2` were changed to `-ge 3`; recovery threshold remains 3 consecutive successes.
+- Loop delay now uses BusyBox `$RANDOM` for `5 + RANDOM % 11` seconds after each full core cycle (5–15s random pause). Syntax checks for core, wrapper and loop passed, and the service was restarted and reported `running`.
+- Logs after the change showed irregular cycle starts about 14–24 seconds apart. There were a few blank probe results, including two consecutive paired failures, but no failover at failure count 2. Later both nodes repeatedly returned HTTP `204`, with both failure counters at 0 and route `PusiSLgE`.
+- User observed one automatic return from direct to primary during this period. A controlled repeatable outage test has not been performed.
+
 ## Important uncertainty
 
 A controlled test where both endpoints fail and then recover has not been done. Successful manual probes and repeated healthy logs do not by themselves prove every failure/recovery branch works. Test only while local access to LuCI or SSH is available.
