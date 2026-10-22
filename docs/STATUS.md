@@ -55,6 +55,10 @@ The live scripts use `PusiSLgE` as primary and `fAk268mE` as backup in both core
 
 After a manual reboot, the displayed route initially showed direct connection and later switched to the primary node without a manual mode change. This is consistent with the watchdog holding direct while early-boot probes fail, then returning to the hard-coded primary after 3 consecutive successful primary probes. This was an observed recovery, though exact timestamps/logs from that specific transition were not captured in the message. It is useful evidence that recovery works in practice, but not a full controlled outage test.
 
+## Final post-reboot check
+
+After the observed automatic recovery, a direct UCI check returned `ha_watchdog.main.mode=auto` and `passwall2.rulenode.default_node=PusiSLgE`. This confirms the watchdog control mode remained automatic while the primary route was restored.
+
 ## Important uncertainty
 
 A controlled test where both endpoints fail and then recover has not been done. Successful manual probes and repeated healthy logs do not by themselves prove every failure/recovery branch works. Test only while local access to LuCI or SSH is available.
