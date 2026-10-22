@@ -1,79 +1,107 @@
-# Cudy WR3000S V2 — OpenWrt / PassWall2 / Watchdog
+# OpenWrt PassWall2 Failover Watchdog
 
-Private operations notebook for the Cudy router and its Home Assistant integration. Snapshot date: **2026-10-22**.
+[![OpenWrt](https://img.shields.io/badge/OpenWrt-25.12%2B-00A3E0)](https://openwrt.org/)
+[![PassWall2](https://img.shields.io/badge/Proxy-PassWall2-6B5CE7)](#)
+[![Home%20Assistant](https://img.shields.io/badge/Optional-Home%20Assistant-18BCF2)](docs/HOME-ASSISTANT.md)
 
-> This is sanitized documentation, not a complete router backup. It intentionally excludes live credentials, VPN subscription content, the private SSH key, HA long-lived tokens, and the working webhook token.
+A practical, documented reference for building a **two-node PassWall2 health-check and failover watchdog** on OpenWrt, with optional Home Assistant controls, telemetry, notifications, and a dashboard.
 
-## Current state (verified from router output)
+This repository is both a reusable example and an operations notebook. It records what was actually observed on one Cudy WR3000S V2 installation, separates verified behavior from assumptions, and keeps sanitized reference scripts. It is **not** a universal one-click installer.
 
-- Device: Cudy WR3000S AX3000 V2.
-- Firmware: OpenWrt 25.12.6, `r33311-981c978eff`.
-- LAN address: `192.168.50.1`.
-- WAN DHCP address observed: `192.168.1.164/24`; gateway `192.168.1.1` (upstream router/double NAT).
-- Primary PassWall2 node ID: `PusiSLgE`.
-- Backup node ID: `fAk268mE`.
-- Direct node ID: `_direct`.
-- Latest verified control mode: `primary` (manual pin); selected route: `PusiSLgE`; HA status last reported as `primary`.
-- Watchdog service: `/etc/init.d/passwall2-failover-watchdog`; status was `running` and boot links were present.
-- Old once-per-minute watchdog cron entry was removed; daily PassWall2 subscription refresh remains.
-- Current loop runs the wrapper, uses a randomized 5–15 second pause, and in manual modes (`primary`, `backup`, `off`) runs a metrics-only probe of both nodes. In `auto`, the core publishes metrics during its regular probes.
-- Latest post-restart metrics-only probes returned HTTP `204` for both nodes (primary about 767 ms and backup about 436 ms in the latest logged cycle); failure counters were `0`.
-- Core probe command is wrapped in `/usr/bin/timeout -k 2 15`. Shell syntax and isolated probes passed.
-- Symlinks were created: `/usr/bin/geoip.dat -> /usr/share/v2ray/geoip.dat` and `/usr/bin/geosite.dat -> /usr/share/v2ray/geosite.dat`. Their relationship to the earlier problem is **not proven**.
+> **Safety first:** do not paste these scripts onto a router blindly. Node IDs, PassWall2 paths, UCI schema, test-script behavior, package versions, and firewall topology differ between installations. Read [deployment and adaptation](docs/INSTALL.md), then inspect your own router. Never commit working credentials or webhook tokens.
 
-## Known limitation to resolve
+## What it can do
 
-The watchdog has hard-coded primary/backup IDs (`PusiSLgE` / `fAk268mE`). HA control mode `auto` is distinct from a native PassWall2 URLTest group. Changing the active node in LuCI does not update the script's roles, and subscription refreshes may change node IDs. See [Watchdog](docs/WATCHDOG.md); do not treat the current script as subscription-safe until dynamic role resolution is implemented and tested.
+- Probe a configured primary and backup PassWall2 node independently.
+- Track consecutive successes and failures, with counters capped at three.
+- In automatic mode, switch primary → backup when the primary has failed three consecutive checks and the backup is healthy.
+- Use direct routing if both configured nodes have reached the failure threshold.
+- Recover from direct or backup to the preferred primary after three successful primary checks, according to the documented state machine.
+- Validate the generated Xray ACL configuration after a route change and attempt to restore the previous route if validation fails.
+- Run as an OpenWrt `procd` service and start automatically after reboot.
+- Add randomized delays rather than a perfectly fixed loop interval.
+- Offer manual modes: pin primary, pin backup, force direct/off, or let the watchdog manage the route.
+- Publish online/offline state, HTTP result, approximate RTT, consecutive failures, and timestamps through volatile UCI telemetry.
+- Optionally expose status and mode controls in Home Assistant, refresh a dashboard, send notifications, and use a webhook to synchronize state.
 
-## Documents
+The design intentionally keeps **route decisions** separate from **telemetry-only probes** in manual modes. Metrics must never change the selected route.
 
-- [Status and known configuration](docs/STATUS.md)
-- [Watchdog logic and operation](docs/WATCHDOG.md)
-- [Home Assistant integration](docs/HOME-ASSISTANT.md)
-- [Firewall / SSH audit](docs/FIREWALL.md)
+## Current reference installation
+
+Last verified from the working session: **2026-10-22**.
+
+| Component | Observed setup |
+|---|---|
+| Router | Cudy WR3000S AX3000 V2 |
+| Firmware | OpenWrt 25.12.6, revision `r33311-981c978eff` |
+| Proxy manager | PassWall2 + Xray |
+| Primary / backup IDs | Stored as examples in the private reference install; IDs are hard-coded in the current script snapshots |
+| Service | `/etc/init.d/passwall2-failover-watchdog`, managed by `procd` |
+| Control mode | `auto` confirmed after the most recent mode change |
+| Selected route | Primary node ID `PusiSLgE` at the last check |
+| Probe timeout | `timeout -k 2 15` in the live core and metrics-only probe |
+| Auto loop pause | Random 5–15 seconds **after** a full cycle |
+| Manual-mode metrics pause | Random 180–300 seconds between loop iterations |
+| Auto-mode metric publication | A new 180–300 second publication gate was added and passed shell syntax checks; its runtime cadence still needs verification |
+| Home Assistant | Optional; the reference setup uses HA 2026.2.3 and `ha-openwrt` 2.4.7 |
+| Persistent metrics writes | Avoided; telemetry values are staged in UCI runtime state and reset after reboot |
+
+The pause is not the full cycle time. Each automatic cycle sequentially probes two nodes, so total elapsed time is probe execution time plus the randomized pause. If probes time out, the cycle may take substantially longer.
+
+### Known limitations — read before use
+
+- **Hard-coded node IDs:** the current reference core and wrapper use fixed primary and backup IDs. PassWall2 subscription refreshes or manual node edits may change those IDs or make the watchdog override an unfamiliar route. Resolve roles dynamically before treating this as subscription-safe.
+- **Auto is the watchdog's mode, not a native PassWall2 URLTest group.** In `ha_watchdog.main.mode=auto`, this script makes its own route decisions by writing `passwall2.rulenode.default_node`.
+- **False negatives and transient failures:** the probe tests a specific HTTP endpoint through each configured node. A successful `204` is evidence that this probe worked, not proof that every website works. A failed probe does not prove that the server was blocked.
+- **No block-avoidance guarantee:** randomized timing and slower telemetry publication reduce regularity/request volume, but cannot guarantee that a provider or network operator will not identify or block a server.
+- **Failure/recovery testing:** a controlled test of every failover branch remains pending. A reboot recovery was observed, but that is not the same as a controlled outage test.
+- **Latest telemetry change:** `passwall2-watchdog-publish-due` was connected to the core and passed `sh -n`; the new publication interval should be verified in live logs before relying on it.
+
+## Quick navigation
+
+- **[Installation and adaptation guide](docs/INSTALL.md)** — with and without Home Assistant, checks, safe rollout, rollback.
+- [Watchdog logic and scheduling](docs/WATCHDOG.md)
+- [Current status / verified observations](docs/STATUS.md)
+- [Home Assistant setup](docs/HOME-ASSISTANT.md)
+- [Diagnostics cookbook](docs/DIAGNOSTICS.md)
 - [Backups and rollback](docs/BACKUPS.md)
-- [Read-only diagnostics](docs/DIAGNOSTICS.md)
+- [Firewall and SSH audit notes](docs/FIREWALL.md)
+- [AI handoff prompt](docs/AI-PROMPT.md) — prompt an assistant to use this repository as the source of truth.
 - [Change log](CHANGELOG.md)
-- `scripts/`: reference snapshots and sanitized wrapper template; these are not automatically safe drop-in replacements.
+- [Sanitized script snapshots](scripts/)
 
-## Safety rules
+## Repository map
 
-1. Keep this repository **Private**.
-2. Never commit `/etc/config/passwall2`, subscription URLs/content, root passwords, private SSH keys, HA long-lived tokens, or a working webhook URL/token.
-3. Compare all reference scripts with the live router files before restoring or deploying them.
-4. Do not deliberately disable both VPN nodes remotely unless local router access is available.
-5. Do not reset/reflash the router as a first-line recovery step.
-6. This repo documents the state we observed. It is not proof that failure/recovery has been stress-tested; that test remains pending.
-
-## Boot/autostart test (2026-10-22)
-
-- The `procd` service was enabled and boot links were present. After a reboot, the service reported `running`.
-- The persisted mode was `primary` (manual pin), not `auto`; this made the wrapper force the primary node and exit without running the two health probes. The service being alive therefore did not mean health checks were running.
-- After changing the HA mode helper to `Авто`, `ha_watchdog.main.mode` became `auto` and the service resumed tests. Recent log cycles were about 10–11 seconds apart, both nodes returned HTTP `204`, and both failure counters stayed at 0.
-- Latest target state: service enabled/running, mode `primary` (manual pin), route `PusiSLgE`. In this manual mode the new metrics-only job is active; it must not change the route. Home Assistant metrics display is still pending, as is a controlled failure/recovery test.
-
-## Current schedule
-
-The old cron line `* * * * * /usr/bin/passwall2-failover >/dev/null 2>&1` was removed on 2026-10-22 after the procd service produced repeated successful probe logs. The daily subscription refresh is still in `/etc/crontabs/root`:
-
-```cron
-00 0 * * * setsid lua /usr/share/passwall2/subscribe.lua start sub_WVRAy cron > /dev/null 2>&1 &
+```text
+README.md                         Project overview and safety rules
+CHANGELOG.md                      Chronological implementation history
+docs/INSTALL.md                   Adaptation/deployment guide
+docs/STATUS.md                    Dated current-state snapshot
+docs/WATCHDOG.md                  State machine, scheduling, limitations
+docs/HOME-ASSISTANT.md            HA helpers, automations, telemetry
+docs/DIAGNOSTICS.md               Read-only checks and troubleshooting
+docs/BACKUPS.md                   Known backups and rollback
+docs/FIREWALL.md                  Observational network/SSH notes
+docs/AI-PROMPT.md                 Reusable AI context prompt
+scripts/passwall2-failover-core.sh
+scripts/passwall2-failover-loop.sh
+scripts/passwall2-failover-watchdog.init
+scripts/passwall2-failover.sh.example
 ```
 
-See [Watchdog](docs/WATCHDOG.md) before changing the schedule.
+Files under `scripts/` are **reference snapshots**, not guaranteed copies of the current router. They may lag behind live changes and must be compared before use. The sanitized wrapper contains a placeholder webhook token by design.
 
+## Safety and privacy
 
-## Metrics-only telemetry — 2026-10-22
+1. Keep this repository private if it contains installation-specific context.
+2. Never commit `/etc/config/passwall2`, subscription URLs, proxy credentials, private SSH keys, HA long-lived access tokens, or a real webhook URL/token.
+3. Replace example IPs, node IDs, usernames, and entity IDs when adapting the guide. Do not assume the sample IDs are stable.
+4. Back up each live file before editing it. Run `sh -n` after changes, then inspect logs and service state.
+5. Do not test failover remotely if loss of both nodes would also remove your only access to LuCI/SSH.
+6. Do not run the old cron watchdog and the `procd` loop concurrently; they can compete for the same lock.
+7. Do not use a generic rollback that overwrites `/etc/config/passwall2`, `network`, or `firewall`.
+8. Treat all commands in this repo as examples until paths, UCI options, service names, and node IDs are verified on the target router.
 
-- UCI telemetry section: `ha_watchdog_metrics.nodes` (read-only from HA; values are staged by `uci set` and intentionally not committed on every check to avoid flash writes).
-- Publisher: `/usr/bin/passwall2-watchdog-publish-metrics`; manual-mode probe: `/usr/bin/passwall2-watchdog-probe-metrics`.
-- Manual-mode probes use separate counter files `metric_p_ok`, `metric_p_fail`, `metric_b_ok`, and `metric_b_fail` under `/tmp/passwall2-failover-state`; they do not modify automatic failover counters or select a route.
-- Last confirmed manual-mode check returned HTTP 204 from both nodes, with zero consecutive failures. Home Assistant dashboard entities have not been added yet.
+## Source-of-truth policy
 
-
-## Latest verification — telemetry and timeout fix (2026-10-22)
-
-- The live timeout in both `/usr/bin/passwall2-failover-core` and `/usr/bin/passwall2-watchdog-probe-metrics` was raised from 10 to 15 seconds. Standalone tests then returned `204:0.365245` (primary) and `204:0.360907` (backup), both with exit code 0. Subsequent watchdog logs at 22:28:49 and 22:29:30 showed both nodes returning HTTP 204 and zero consecutive failures. This supports the timeout adjustment but does not establish the definitive cause of earlier timeouts.
-- The publisher now executes `uci revert ha_watchdog_metrics` before staging the current cycle's metric fields. After a manual publish, `/tmp/.uci/ha_watchdog_metrics` was 722 bytes and `uci show ha_watchdog_metrics` succeeded; the earlier accumulated delta was backed up to `/tmp/ha_watchdog_metrics.uci-delta.bak` and reverted.
-- Watchdog service reports `running`; latest mode `primary` and route `PusiSLgE` were confirmed. Manual-mode telemetry does not select a route.
-- Home Assistant helpers `input_text.passwall2_primary_metrics` and `input_text.passwall2_backup_metrics` now exist; a UI-created polling automation populates them through `openwrt.uci_get`. The Markdown card still needs its final UI formatting confirmed. A controlled outage/recovery test remains pending.
+For future maintenance, read this file plus [STATUS](docs/STATUS.md), [WATCHDOG](docs/WATCHDOG.md), [HOME-ASSISTANT](docs/HOME-ASSISTANT.md), and [CHANGELOG](CHANGELOG.md) before proposing changes. When live state and documentation disagree, ask for fresh read-only command output, update the dated status, and never silently assume either source is current.
