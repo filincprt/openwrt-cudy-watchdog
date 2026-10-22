@@ -112,3 +112,33 @@ A follow-up UCI check after the router reboot/recovery returned `ha_watchdog.mai
 ## Controlled fail/recovery test — still pending
 
 Do not test a failure remotely unless you have local access to the router. The test should verify primary down -> backup, both down -> direct, and primary restored -> primary. Record timestamps and watchdog logs. Avoid making both nodes unavailable if remote management is your only access.
+
+
+## Probe frequency and traffic-triggered monitoring — design discussion (2026-10-22)
+
+Current observed cadence is around 10–11 seconds per completed two-node cycle. Each node probe invokes PassWall2 `test.sh url_test_node`, which starts a temporary SOCKS proxy, waits about 2 seconds, and makes an HTTPS HEAD request to the configured URL (default shown in the script: `https://www.google.com/generate_204`). A steady 10.5-second cadence is approximately 8,200 probe attempts per node per day. Payload is small, but the fixed request pattern and repeated temporary-proxy startup are not free. Xray's official Observatory documentation also warns that fixed-interval probes can create a behavioral fingerprint: https://xtls.github.io/en/config/observatory.html. This is a general caution, not evidence that current checks caused any specific server block.
+
+### Traffic-aware proposal: pros and cons
+
+**Potential benefits**
+- Extra tests can be triggered quickly when an active user request or connection appears to stall.
+- A slower baseline schedule can reduce periodic requests while retaining autonomous health monitoring.
+- A second confirmation probe can help distinguish a transient timeout from a real outage.
+
+**Limitations**
+- No user traffic is normal when the home is idle; absence of bytes alone must not be treated as a dead node.
+- Ordinary router/WAN counters are not necessarily per-node counters and include direct, DNS, HA and other traffic.
+- TCP retransmissions or stalled sessions may continue incrementing counters even when the destination is unusable.
+- A traffic-triggered-only monitor may discover an outage only when the next user tries to use the internet, and cannot pre-validate the backup while idle.
+- Current implementation tests both configured node IDs independently, even if the active route is direct or backup. A passive traffic monitor does not inherently provide this comparison.
+
+### Recommended direction (not yet implemented)
+
+Use a hybrid design rather than traffic-only detection:
+1. Keep a low-rate independent probe for both nodes so the backup is pre-checked.
+2. If an actual request/active-traffic symptom indicates trouble, trigger an extra confirmation probe; do not fail over solely because the byte counter stopped increasing.
+3. Consider 3 consecutive failures rather than 2 before declaring a node dead, and investigate multi-target verification / startup grace to avoid false direct mode during WAN startup. Increasing the failure threshold delays real failover, so tune only after observing logs.
+4. Keep 3 consecutive successful probes to recover; add a short cooldown/minimum-dwell period only if logs show flapping.
+5. Do not implement changes until the signal is well-defined and the test scenario can be tested without losing remote access.
+
+No router code was changed as part of this design discussion.
