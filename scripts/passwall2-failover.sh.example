@@ -65,7 +65,7 @@ case "$CURRENT" in
     PusiSLgE) STATUS="primary" ;;
     fAk268mE) STATUS="backup" ;;
     _direct)
-        if [ "$P_FAIL" -ge 2 ] && [ "$B_FAIL" -ge 2 ]; then
+        if [ "$P_FAIL" -ge 3 ] && [ "$B_FAIL" -ge 3 ]; then
             STATUS="offline"
         else
             STATUS="direct"
