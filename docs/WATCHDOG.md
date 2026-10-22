@@ -93,6 +93,14 @@ uci -q get ha_watchdog.main.status
 uci -q get passwall2.rulenode.default_node
 ```
 
+## Expected behavior after power loss / router reboot
+
+- The procd service is enabled at boot (verified links include `S99passwall2-failover-watchdog`). Scripts and UCI configuration persist across power loss; `/tmp/passwall2-failover-state` counters and the lock directory are volatile and reset on reboot.
+- Last observed persisted `ha_watchdog.main.mode` was `auto`, and route was `PusiSLgE`. In `auto`, once the loop is running it probes primary and backup. When both pass, it leaves the current route alone.
+- During early boot the uplink or proxy stack may not yet be ready. Transient failed probes can trigger the same failover thresholds as real outages; when primary then succeeds 3 times consecutively, current logic returns to the hard-coded primary ID.
+- If the persisted mode is instead `primary`, `backup`, or `off`, the wrapper enforces that choice and exits early without health probing. So after a reboot, check the saved mode as well as service status.
+- Home Assistant is not required for the core loop to probe/switch, but its selected mode helper and startup automation can potentially change the UCI mode; verify both if they disagree.
+
 ## Controlled fail/recovery test — still pending
 
 Do not test a failure remotely unless you have local access to the router. The test should verify primary down -> backup, both down -> direct, and primary restored -> primary. Record timestamps and watchdog logs. Avoid making both nodes unavailable if remote management is your only access.
