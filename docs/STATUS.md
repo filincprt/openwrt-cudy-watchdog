@@ -47,6 +47,10 @@ The service reported `running`, and boot links `S99passwall2-failover-watchdog` 
 - After the mode helper was changed to `Авто`, UCI reported `auto`, route `PusiSLgE`, status `primary`, and recent log lines showed both probes returning HTTP `204` with `ok=3 fail=0` and `p_fail=b_fail=0`.
 - Recent full cycle output times were roughly 10–11 seconds apart.
 
+## Design caveat — node IDs are hard-coded
+
+The live scripts use `PusiSLgE` as primary and `fAk268mE` as backup in both core and wrapper. HA mode `auto` means the watchdog is enabled; it does not mean PassWall2's currently selected route is a native URLTest/auto group. On recovery, current logic selects the hard-coded primary node ID. Manually selecting a different node in LuCI can be overridden by the next watchdog cycle. Subscription refreshes may alter internal node IDs; the current watchdog is not yet dynamic-role/subscription-safe.
+
 ## Important uncertainty
 
 A controlled test where both endpoints fail and then recover has not been done. Successful manual probes and repeated healthy logs do not by themselves prove every failure/recovery branch works. Test only while local access to LuCI or SSH is available.
