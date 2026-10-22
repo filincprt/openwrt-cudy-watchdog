@@ -33,7 +33,7 @@ logread | grep -Ei 'passwall2-failover|failover' | tail -n 80
 ```sh
 /usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node PusiSLgE urltest_node
 echo "EXIT_CODE=$?"
-/usr/bin/timeout -k 2 10 /usr/share/passwall2/test.sh url_test_node fAk268mE urltest_node
+/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node fAk268mE urltest_node
 echo "EXIT_CODE=$?"
 ps w | grep -E '[u]rl_test_PusiSLgE|[u]rl_test_fAk268mE'
 ```
