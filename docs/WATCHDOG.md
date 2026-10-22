@@ -101,6 +101,10 @@ uci -q get passwall2.rulenode.default_node
 - If the persisted mode is instead `primary`, `backup`, or `off`, the wrapper enforces that choice and exits early without health probing. So after a reboot, check the saved mode as well as service status.
 - Home Assistant is not required for the core loop to probe/switch, but its selected mode helper and startup automation can potentially change the UCI mode; verify both if they disagree.
 
+## Reboot recovery observation — 2026-10-22
+
+The user rebooted the router. The displayed status initially showed direct connection, then later moved to the primary node automatically. This matches current logic: while current route is `_direct`, three consecutive successful primary probes trigger a switch to `PusiSLgE`. The exact event logs for the transition were not captured, so this is consistent with, rather than a packet-level proof of, the code path. A controlled outage test (primary down, fallback behavior, restore) is still pending.
+
 ## Controlled fail/recovery test — still pending
 
 Do not test a failure remotely unless you have local access to the router. The test should verify primary down -> backup, both down -> direct, and primary restored -> primary. Record timestamps and watchdog logs. Avoid making both nodes unavailable if remote management is your only access.
