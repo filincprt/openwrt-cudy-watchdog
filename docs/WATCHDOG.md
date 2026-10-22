@@ -141,4 +141,15 @@ Use a hybrid design rather than traffic-only detection:
 4. Keep 3 consecutive successful probes to recover; add a short cooldown/minimum-dwell period only if logs show flapping.
 5. Do not implement changes until the signal is well-defined and the test scenario can be tested without losing remote access.
 
-No router code was changed as part of this design discussion.
+## Jitter and failure threshold change — 2026-10-22
+
+Live router change completed and syntax-checked:
+- In core and wrapper, failover/offline decision comparisons previously using `-ge 2` were changed to `-ge 3`. Three consecutive failed probe cycles are now required before failover decisions that use these counters. Recovery stays at three consecutive successes.
+- The loop's fixed `sleep 5` was replaced with `RANDOM_VALUE="$RANDOM"; WAIT=$((5 + RANDOM_VALUE % 11)); sleep "$WAIT"`, giving a 5–15 second random pause **after** each completed cycle.
+- The procd service was restarted and reported `running`. `sh -n` passed for core, wrapper and loop.
+- Recent observed cycle timestamps included 19:53:20, 19:53:41, 19:54:04, 19:54:17, 19:54:31, 19:54:53, 19:55:07, 19:55:31, 19:55:53, 19:56:07, 19:56:26, 19:56:48 and 19:57:12. This is consistent with variable intervals; total cycle time is probe execution + randomized sleep.
+- Earlier both probes returned empty results at 19:43:42, 19:45:19 and 19:45:49. After threshold change, the logged pair of failures reached 2 without triggering a route change. Subsequent cycles returned HTTP 204 for both nodes; current observed counters `p_fail=0`, `b_fail=0`, route `PusiSLgE`, status `primary`, and mode was `auto` (mode line appeared interleaved in terminal paste but output value was `auto`).
+- The user also observed one automatic change from direct route back to primary during this period. That matches the intended recovery logic, but the exact route-change timestamps were not captured in the shared log.
+- The jitter changes probe scheduling predictability; they do not prove avoidance of external detection. The blank probe outputs still need root-cause investigation if they recur.
+
+No router code was changed as part of the earlier design discussion; the above is the subsequent live change recorded after implementation.
