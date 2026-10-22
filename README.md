@@ -1,6 +1,6 @@
 # OpenWrt PassWall2 Failover Watchdog
 
-**[Русская версия документации](README.ru.md)** · [English documentation](README.md)
+**[Русская версия документации](README.ru.md)**
 
 A small, shell-based failover watchdog for OpenWrt + PassWall2. It can run on its own or report state and telemetry to Home Assistant (HA). This repository is both a reusable reference implementation and an operational notebook: **read the safety notes and inspect the scripts before deploying them**.
 
