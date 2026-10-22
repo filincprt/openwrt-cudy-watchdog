@@ -13,11 +13,11 @@ Private operations notebook for the Cudy router and its Home Assistant integrati
 - Primary PassWall2 node ID: `PusiSLgE`.
 - Backup node ID: `fAk268mE`.
 - Direct node ID: `_direct`.
-- Watchdog UCI mode: `auto`; selected route: `PusiSLgE`; HA status: `primary`.
+- Latest verified control mode: `primary` (manual pin); selected route: `PusiSLgE`; HA status last reported as `primary`.
 - Watchdog service: `/etc/init.d/passwall2-failover-watchdog`; status was `running` and boot links were present.
 - Old once-per-minute watchdog cron entry was removed; daily PassWall2 subscription refresh remains.
-- Current loop runs the wrapper then sleeps 5 seconds. Full observed cycle cadence was about 17–18 seconds because both node probes are sequential.
-- Last observed probes for primary and backup returned HTTP `204`; their counters were `ok=3 fail=0`.
+- Current loop runs the wrapper, uses a randomized 5–15 second pause, and in manual modes (`primary`, `backup`, `off`) runs a metrics-only probe of both nodes. In `auto`, the core publishes metrics during its regular probes.
+- Latest confirmed metrics-only probes returned HTTP `204` for both nodes (roughly 353 ms primary / 353 ms backup in one logged cycle); failure counters were `0`.
 - Core probe command is wrapped in `/usr/bin/timeout -k 2 10`. Shell syntax and isolated probes passed.
 - Symlinks were created: `/usr/bin/geoip.dat -> /usr/share/v2ray/geoip.dat` and `/usr/bin/geosite.dat -> /usr/share/v2ray/geosite.dat`. Their relationship to the earlier problem is **not proven**.
 
@@ -50,7 +50,7 @@ The watchdog has hard-coded primary/backup IDs (`PusiSLgE` / `fAk268mE`). HA con
 - The `procd` service was enabled and boot links were present. After a reboot, the service reported `running`.
 - The persisted mode was `primary` (manual pin), not `auto`; this made the wrapper force the primary node and exit without running the two health probes. The service being alive therefore did not mean health checks were running.
 - After changing the HA mode helper to `Авто`, `ha_watchdog.main.mode` became `auto` and the service resumed tests. Recent log cycles were about 10–11 seconds apart, both nodes returned HTTP `204`, and both failure counters stayed at 0.
-- Current target state: service enabled/running, mode `auto`, route `PusiSLgE`, status `primary`. Automatic failure/recovery stress test is still pending.
+- Latest target state: service enabled/running, mode `primary` (manual pin), route `PusiSLgE`. In this manual mode the new metrics-only job is active; it must not change the route. Home Assistant metrics display is still pending, as is a controlled failure/recovery test.
 
 ## Current schedule
 
@@ -61,3 +61,11 @@ The old cron line `* * * * * /usr/bin/passwall2-failover >/dev/null 2>&1` was re
 ```
 
 See [Watchdog](docs/WATCHDOG.md) before changing the schedule.
+
+
+## Metrics-only telemetry — 2026-10-22
+
+- UCI telemetry section: `ha_watchdog_metrics.nodes` (read-only from HA; values are staged by `uci set` and intentionally not committed on every check to avoid flash writes).
+- Publisher: `/usr/bin/passwall2-watchdog-publish-metrics`; manual-mode probe: `/usr/bin/passwall2-watchdog-probe-metrics`.
+- Manual-mode probes use separate counter files `metric_p_ok`, `metric_p_fail`, `metric_b_ok`, and `metric_b_fail` under `/tmp/passwall2-failover-state`; they do not modify automatic failover counters or select a route.
+- Last confirmed manual-mode check returned HTTP 204 from both nodes, with zero consecutive failures. Home Assistant dashboard entities have not been added yet.
