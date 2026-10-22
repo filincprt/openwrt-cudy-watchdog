@@ -7,7 +7,6 @@ while :; do
     done
 
     MODE="$(uci -q get ha_watchdog.main.mode 2>/dev/null)"
-
     case "$MODE" in
         primary|backup|off)
             /usr/bin/passwall2-watchdog-probe-metrics 2>&1 | while IFS= read -r line; do
