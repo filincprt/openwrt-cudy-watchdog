@@ -15,6 +15,7 @@ Sanitized reference as of 2026-10-22. No working webhook token is included.
 UCI configuration on router:
 - `ha_watchdog.main.mode`: `auto`, `primary`, `backup`, or `off`.
 - `ha_watchdog.main.status`: `primary`, `backup`, `manual_off`, `direct`, `offline`, or `unknown`.
+- Latest observed `ha_watchdog.main.mode` is `primary`, selected route `PusiSLgE`.
 - Wrapper webhook URL path is `/api/webhook/<REDACTED>`; do not copy the real token into this repository.
 
 ## Helper entities
@@ -47,3 +48,18 @@ Automations discussed:
 ## Webhook test
 
 From OpenWrt, POST to the configured HA webhook returned HTTP 200. The actual webhook token has intentionally been omitted. To test on the live router, inspect the exact local wrapper and call the configured webhook only from a trusted network. Never put the token in issue comments, chat logs, public repositories or sanitized backups.
+
+
+## PassWall2 node metrics — router side ready, HA display pending (2026-10-22)
+
+OpenWrt publishes volatile UCI fields under `ha_watchdog_metrics.nodes`:
+
+| Option | Meaning |
+|---|---|
+| `primary_ok`, `backup_ok` | `online` / `offline` from the most recent probe |
+| `primary_result`, `backup_result` | Raw HTTP result (e.g. `204:0.353328`) or `no-response` |
+| `primary_rtt_ms`, `backup_rtt_ms` | Rounded latency in milliseconds, or `unknown` |
+| `primary_failures`, `backup_failures` | Consecutive failed probe count, capped at 3 |
+| `primary_checked_at`, `backup_checked_at`, `last_check` | Local router timestamp |
+
+Router-side telemetry was verified by reading `uci show ha_watchdog_metrics`; both probes returned HTTP 204 and counters were 0. Watchdog logs confirmed that telemetry refresh runs in manual mode after the service restart. The matching HA input/helper entities and dashboard cards have **not** been created yet. Next: verify the response shape returned by `openwrt.uci_get` in HA Developer Tools, then add a UI-only polling automation and helpers/cards to the existing VPN dashboard section.
