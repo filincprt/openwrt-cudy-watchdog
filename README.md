@@ -17,8 +17,8 @@ Private operations notebook for the Cudy router and its Home Assistant integrati
 - Watchdog service: `/etc/init.d/passwall2-failover-watchdog`; status was `running` and boot links were present.
 - Old once-per-minute watchdog cron entry was removed; daily PassWall2 subscription refresh remains.
 - Current loop runs the wrapper, uses a randomized 5–15 second pause, and in manual modes (`primary`, `backup`, `off`) runs a metrics-only probe of both nodes. In `auto`, the core publishes metrics during its regular probes.
-- Latest confirmed metrics-only probes returned HTTP `204` for both nodes (roughly 353 ms primary / 353 ms backup in one logged cycle); failure counters were `0`.
-- Core probe command is wrapped in `/usr/bin/timeout -k 2 10`. Shell syntax and isolated probes passed.
+- Latest post-restart metrics-only probes returned HTTP `204` for both nodes (primary about 767 ms and backup about 436 ms in the latest logged cycle); failure counters were `0`.
+- Core probe command is wrapped in `/usr/bin/timeout -k 2 15`. Shell syntax and isolated probes passed.
 - Symlinks were created: `/usr/bin/geoip.dat -> /usr/share/v2ray/geoip.dat` and `/usr/bin/geosite.dat -> /usr/share/v2ray/geosite.dat`. Their relationship to the earlier problem is **not proven**.
 
 ## Known limitation to resolve
@@ -69,3 +69,11 @@ See [Watchdog](docs/WATCHDOG.md) before changing the schedule.
 - Publisher: `/usr/bin/passwall2-watchdog-publish-metrics`; manual-mode probe: `/usr/bin/passwall2-watchdog-probe-metrics`.
 - Manual-mode probes use separate counter files `metric_p_ok`, `metric_p_fail`, `metric_b_ok`, and `metric_b_fail` under `/tmp/passwall2-failover-state`; they do not modify automatic failover counters or select a route.
 - Last confirmed manual-mode check returned HTTP 204 from both nodes, with zero consecutive failures. Home Assistant dashboard entities have not been added yet.
+
+
+## Latest verification — telemetry and timeout fix (2026-10-22)
+
+- The live timeout in both `/usr/bin/passwall2-failover-core` and `/usr/bin/passwall2-watchdog-probe-metrics` was raised from 10 to 15 seconds. Standalone tests then returned `204:0.365245` (primary) and `204:0.360907` (backup), both with exit code 0. Subsequent watchdog logs at 22:28:49 and 22:29:30 showed both nodes returning HTTP 204 and zero consecutive failures. This supports the timeout adjustment but does not establish the definitive cause of earlier timeouts.
+- The publisher now executes `uci revert ha_watchdog_metrics` before staging the current cycle's metric fields. After a manual publish, `/tmp/.uci/ha_watchdog_metrics` was 722 bytes and `uci show ha_watchdog_metrics` succeeded; the earlier accumulated delta was backed up to `/tmp/ha_watchdog_metrics.uci-delta.bak` and reverted.
+- Watchdog service reports `running`; latest mode `primary` and route `PusiSLgE` were confirmed. Manual-mode telemetry does not select a route.
+- Home Assistant helpers `input_text.passwall2_primary_metrics` and `input_text.passwall2_backup_metrics` now exist; a UI-created polling automation populates them through `openwrt.uci_get`. The Markdown card still needs its final UI formatting confirmed. A controlled outage/recovery test remains pending.
