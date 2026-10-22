@@ -31,3 +31,9 @@
 - Recorded expected boot sequence: enabled procd service starts automatically; the watchdog mode is read from persistent UCI; `/tmp` counters and lock reset on reboot.
 - Recorded startup caveat: if mode persists as `primary`, `backup`, or `off`, the wrapper enforces it and skips probes. The mode should be checked after boot; current observed mode is `auto`.
 - Noted that early-boot connectivity transients can count as probe failures and that a controlled restart/outage recovery test remains pending.
+
+## 2026-10-22 — reboot recovery observed
+
+- After a manual reboot, the route/status first appeared as direct connection, then switched to the primary node without a manual mode change.
+- This is consistent with early-boot node probes failing temporarily and the watchdog returning from `_direct` after three successful primary probes.
+- Exact transition logs were not provided, so the result is recorded as an observed behavior consistent with the watchdog logic, not as a full controlled outage test.
