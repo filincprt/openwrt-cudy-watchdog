@@ -1,0 +1,77 @@
+#!/bin/sh
+# SANITIZED REFERENCE TEMPLATE ONLY — not a drop-in replacement.
+# The live router wrapper contains a private Home Assistant webhook token.
+# Never commit its actual URL/token into this repository.
+
+OFF_FLAG="/etc/passwall2-vpn-manual-off"
+STATE_DIR="/tmp/passwall2-failover-state"
+HA_WEBHOOK_URL="http://192.168.50.187:8123/api/webhook/REDACTED_TOKEN"
+
+set_status() {
+    OLD="$(uci -q get ha_watchdog.main.status 2>/dev/null)"
+    [ "$OLD" = "$1" ] && return 0
+    uci set ha_watchdog.main='state' || return 1
+    uci set "ha_watchdog.main.status=$1" || return 1
+    uci commit ha_watchdog || return 1
+    /usr/bin/curl -fsS --max-time 3 -X POST "$HA_WEBHOOK_URL" >/dev/null 2>&1 || true
+}
+
+apply_node() {
+    TARGET="$1"
+    STATUS="$2"
+    CURRENT="$(uci -q get passwall2.rulenode.default_node)"
+    if [ "$CURRENT" != "$TARGET" ]; then
+        uci set "passwall2.rulenode.default_node=$TARGET" || return 1
+        uci commit passwall2 || return 1
+        /etc/init.d/passwall2 restart || return 1
+    fi
+    set_status "$STATUS"
+}
+
+MODE="$(uci -q get ha_watchdog.main.mode 2>/dev/null)"
+case "$MODE" in
+    off)
+        touch "$OFF_FLAG" || exit 1
+        apply_node '_direct' 'manual_off'
+        exit $?
+        ;;
+    primary)
+        rm -f "$OFF_FLAG"
+        apply_node 'PusiSLgE' 'primary'
+        exit $?
+        ;;
+    backup)
+        rm -f "$OFF_FLAG"
+        apply_node 'fAk268mE' 'backup'
+        exit $?
+        ;;
+    auto|"")
+        rm -f "$OFF_FLAG"
+        ;;
+    *)
+        set_status unknown
+        exit 2
+        ;;
+esac
+
+/usr/bin/passwall2-failover-core "$@"
+CORE_RC=$?
+CURRENT="$(uci -q get passwall2.rulenode.default_node)"
+P_FAIL="$(cat "$STATE_DIR/p_fail" 2>/dev/null)"
+B_FAIL="$(cat "$STATE_DIR/b_fail" 2>/dev/null)"
+case "$P_FAIL" in ''|*[!0-9]*) P_FAIL=0 ;; esac
+case "$B_FAIL" in ''|*[!0-9]*) B_FAIL=0 ;; esac
+case "$CURRENT" in
+    PusiSLgE) STATUS="primary" ;;
+    fAk268mE) STATUS="backup" ;;
+    _direct)
+        if [ "$P_FAIL" -ge 2 ] && [ "$B_FAIL" -ge 2 ]; then
+            STATUS="offline"
+        else
+            STATUS="direct"
+        fi
+        ;;
+    *) STATUS="unknown" ;;
+esac
+set_status "$STATUS"
+exit "$CORE_RC"
