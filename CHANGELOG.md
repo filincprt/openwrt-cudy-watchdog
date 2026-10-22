@@ -84,3 +84,10 @@
 - Updated `docs/STATUS.md`, `docs/WATCHDOG.md`, `docs/HOME-ASSISTANT.md`, `docs/BACKUPS.md`, and `docs/DIAGNOSTICS.md` with the latest mode, telemetry dashboard confirmation, gate status, verification gaps, and safe diagnostic commands.
 - Synced the core and loop reference snapshots to the 15-second probe timeout, gated auto-mode metric publication, and 180–300 second manual-mode interval.
 - User-confirmed current UCI mode is `auto`; selected route is `PusiSLgE`. The gate/core passed shell syntax checks. Actual runtime separation between frequent health checks and slower telemetry publication still needs confirmation in logs; controlled outage/recovery test remains pending.
+
+
+## 2026-10-22 — Russian documentation
+
+- Added `README.ru.md` and a Russian documentation set under `docs/ru/` covering deployment, status, watchdog behavior, Home Assistant, diagnostics, backups/rollback, firewall/SSH, and AI handoff guidance.
+- Linked the Russian version from the top of the English README. Existing English files and paths remain available.
+- Kept commands, paths, UCI keys and node IDs unchanged in the translations so they remain copyable. Russian documentation is a translation/reference layer; live router state must still be rechecked before making changes.
