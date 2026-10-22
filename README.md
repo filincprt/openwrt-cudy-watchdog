@@ -1,5 +1,7 @@
 # OpenWrt PassWall2 Failover Watchdog
 
+**[Русская версия документации](README.ru.md)** · [English documentation](README.md)
+
 A small, shell-based failover watchdog for OpenWrt + PassWall2. It can run on its own or report state and telemetry to Home Assistant (HA). This repository is both a reusable reference implementation and an operational notebook: **read the safety notes and inspect the scripts before deploying them**.
 
 > **Status: reference project, not a universal one-click installer.** The live setup was developed on a Cudy WR3000S AX3000 V2 with OpenWrt 25.12.6 and PassWall2. A clean install on another router/PassWall2 build has not been certified. The included IDs, paths, UCI options and Xray validation path must be adapted and tested.
