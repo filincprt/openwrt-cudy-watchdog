@@ -25,3 +25,9 @@
 - Documented that route recovery currently selects the hard-coded primary ID rather than a native Auto group.
 - Recorded that primary/backup IDs are duplicated as literals in the core and wrapper, so LuCI route changes are not adopted automatically and subscription node-ID changes may break assumptions.
 - Future improvement: resolve configured primary/backup roles dynamically (with missing/ambiguous-match safeguards) or intentionally redesign around a native PassWall2 URLTest group. No live router scripts were changed in this documentation update.
+
+## 2026-10-22 — documented power-cycle behavior
+
+- Recorded expected boot sequence: enabled procd service starts automatically; the watchdog mode is read from persistent UCI; `/tmp` counters and lock reset on reboot.
+- Recorded startup caveat: if mode persists as `primary`, `backup`, or `off`, the wrapper enforces it and skips probes. The mode should be checked after boot; current observed mode is `auto`.
+- Noted that early-boot connectivity transients can count as probe failures and that a controlled restart/outage recovery test remains pending.
