@@ -5,5 +5,17 @@ while :; do
     /usr/bin/passwall2-failover 2>&1 | while IFS= read -r line; do
         logger -t passwall2-watchdog "$line"
     done
-    sleep 5
+
+    MODE="$(uci -q get ha_watchdog.main.mode 2>/dev/null)"
+    case "$MODE" in
+        primary|backup|off)
+            /usr/bin/passwall2-watchdog-probe-metrics 2>&1 | while IFS= read -r line; do
+                logger -t passwall2-watchdog-metrics "$line"
+            done
+            ;;
+    esac
+
+    RANDOM_VALUE="$RANDOM"
+    WAIT=$((5 + RANDOM_VALUE % 11))
+    sleep "$WAIT"
 done
