@@ -21,6 +21,10 @@ Private operations notebook for the Cudy router and its Home Assistant integrati
 - Core probe command is wrapped in `/usr/bin/timeout -k 2 10`. Shell syntax and isolated probes passed.
 - Symlinks were created: `/usr/bin/geoip.dat -> /usr/share/v2ray/geoip.dat` and `/usr/bin/geosite.dat -> /usr/share/v2ray/geosite.dat`. Their relationship to the earlier problem is **not proven**.
 
+## Known limitation to resolve
+
+The watchdog has hard-coded primary/backup IDs (`PusiSLgE` / `fAk268mE`). HA control mode `auto` is distinct from a native PassWall2 URLTest group. Changing the active node in LuCI does not update the script's roles, and subscription refreshes may change node IDs. See [Watchdog](docs/WATCHDOG.md); do not treat the current script as subscription-safe until dynamic role resolution is implemented and tested.
+
 ## Documents
 
 - [Status and known configuration](docs/STATUS.md)
