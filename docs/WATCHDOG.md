@@ -109,6 +109,17 @@ The user rebooted the router. The displayed status initially showed direct conne
 
 A follow-up UCI check after the router reboot/recovery returned `ha_watchdog.main.mode=auto` and `passwall2.rulenode.default_node=PusiSLgE`. The route switched from direct to the primary node automatically and the watchdog remained in auto control mode.
 
+## Tuning update (2026-10-22)
+
+The live scripts were edited and checked:
+- Failure comparisons in core and wrapper were changed from two failures to three.
+- Recovery remains at three consecutive successes.
+- The loop now waits a random 5–15 seconds after each complete test cycle, using BusyBox `$RANDOM`. Cycle time is probe runtime plus this delay; it is not a 5–15 second total cycle.
+- Backups are stored on router as `passwall2-failover-core.bak-before-jitter`, `passwall2-failover.bak-before-jitter`, and `passwall2-failover-loop.bak-before-jitter`.
+- Syntax checks passed; service was restarted and status returned `running`.
+- Two recent cycles showed blank outputs for both probes, with failure count increasing to 2; route did not switch at count 2. Later both probes returned HTTP 204 and counters reset to zero. The user observed an automatic route recovery from direct to primary.
+- The underlying cause of blank probes is unknown, so the tuning reduces sensitivity but does not diagnose that condition.
+
 ## Controlled fail/recovery test — still pending
 
 Do not test a failure remotely unless you have local access to the router. The test should verify primary down -> backup, both down -> direct, and primary restored -> primary. Record timestamps and watchdog logs. Avoid making both nodes unavailable if remote management is your only access.
