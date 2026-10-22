@@ -52,7 +52,7 @@ Current live schedule (2026-10-22):
 ## Repository map
 
 - [Quick deployment overview](docs/DEPLOYMENT.md) — deployment stages and safety gates.
-- [Detailed install/adaptation guide](docs/INSTALL.md) — step-by-step setup with and without Home Assistant.
+- [Deployment and adaptation guide](docs/DEPLOYMENT.md) — step-by-step setup with and without Home Assistant. [Legacy install link](docs/INSTALL.md) redirects here.
 - [Watchdog internals](docs/WATCHDOG.md) — decision logic, intervals, limitations.
 - [Home Assistant](docs/HOME-ASSISTANT.md) — helpers, UI automations, metrics and webhook safety.
 - [Current status](docs/STATUS.md) — last verified live state and unresolved tests.
@@ -61,7 +61,7 @@ Current live schedule (2026-10-22):
 - [Firewall / SSH](docs/FIREWALL.md) — prior audit and cautions.
 - [Change log](CHANGELOG.md) — notable live changes.
 - [AI prompt](docs/AI-PROMPT.md) — reusable prompt to make another model treat this repository as the source of truth.
-- `scripts/` — **sanitized reference snapshots**, not necessarily identical to the latest live files and not drop-in safe until compared.
+- `scripts/` — **sanitized reference snapshots**, not necessarily identical to the latest live files and not drop-in safe until compared. Includes the core, loop, procd service, wrapper template, metrics-only probe, metrics publisher, and automatic-mode publication gate.
 
 ## Quick health check
 
