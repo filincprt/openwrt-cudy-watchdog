@@ -11,3 +11,10 @@
 - Added `/usr/bin/geoip.dat` and `/usr/bin/geosite.dat` symlinks to files under `/usr/share/v2ray/`. The relation to the original issue is not proven.
 - Verified repeated logs with `ok=3 fail=0` for both nodes and no lock directory after completed cycles.
 - Automatic failover under a controlled failure and subsequent recovery has **not** yet been tested.
+
+## 2026-10-22 — boot/autostart check
+
+- Confirmed `procd` watchdog service reported `running` after reboot and boot symlinks were present.
+- Found the UCI mode had persisted as `primary`, which bypasses health probes; changed mode to `auto` through the HA helper.
+- After switching to `auto`, repeated watchdog logs appeared every roughly 10–11 seconds. Both primary and backup probes returned HTTP `204`, counters showed `ok=3 fail=0`, and the selected route/status were `PusiSLgE` / `primary`.
+- Confirmed service boot autostart, but not a simulated outage + recovery sequence.
