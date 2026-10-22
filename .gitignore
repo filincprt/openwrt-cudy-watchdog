@@ -1,0 +1,13 @@
+# Never commit live secrets or unsanitized router exports.
+local-secrets.md
+secrets/
+*.secret
+*.secrets
+.env
+.env.*
+*.key
+id_ed25519
+id_ed25519.pub
+router-export*
+passwall2-config-export*
+ha-automation-export-with-token*
