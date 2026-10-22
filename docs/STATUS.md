@@ -40,6 +40,13 @@ The service reported `running`, and boot links `S99passwall2-failover-watchdog` 
 - Logs appeared about 17–18 seconds apart for a full pair of tests.
 - The normal HTTP probe target is configured via PassWall2's `url_test_url` setting, default shown by script as `https://www.google.com/generate_204`.
 
+## Boot/autostart verification — 2026-10-22
+
+- `/etc/rc.d/S99passwall2-failover-watchdog` and `K10...` links were present; after reboot the service reported `running`.
+- The mode persisted as `primary`, so the service's wrapper forced the primary route and skipped health probes. This was expected manual-mode behavior, not proof of a failed autostart.
+- After the mode helper was changed to `Авто`, UCI reported `auto`, route `PusiSLgE`, status `primary`, and recent log lines showed both probes returning HTTP `204` with `ok=3 fail=0` and `p_fail=b_fail=0`.
+- Recent full cycle output times were roughly 10–11 seconds apart.
+
 ## Important uncertainty
 
 A controlled test where both endpoints fail and then recover has not been done. Successful manual probes and repeated healthy logs do not by themselves prove every failure/recovery branch works. Test only while local access to LuCI or SSH is available.
