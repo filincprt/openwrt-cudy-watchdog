@@ -68,15 +68,17 @@ echo "$p_fail" > "$STATE/p_fail"
 echo "$b_ok" > "$STATE/b_ok"
 echo "$b_fail" > "$STATE/b_fail"
 
+/usr/bin/passwall2-watchdog-publish-metrics "$p_result" "$p_ok" "$p_fail" "$b_result" "$b_ok" "$b_fail"
+
 current="$(uci -q get "$CONF")"
 desired="$current"
 
 case "$current" in
     "$PRIMARY")
-        if [ "$p_fail" -ge 2 ]; then
+        if [ "$p_fail" -ge 3 ]; then
             if [ "$b_good" -eq 1 ]; then
                 desired="$BACKUP"
-            elif [ "$b_fail" -ge 2 ]; then
+            elif [ "$b_fail" -ge 3 ]; then
                 desired="_direct"
             fi
         fi
@@ -84,10 +86,10 @@ case "$current" in
     "$BACKUP")
         if [ "$p_ok" -ge 3 ]; then
             desired="$PRIMARY"
-        elif [ "$b_fail" -ge 2 ]; then
+        elif [ "$b_fail" -ge 3 ]; then
             if [ "$p_good" -eq 1 ]; then
                 desired="$PRIMARY"
-            elif [ "$p_fail" -ge 2 ]; then
+            elif [ "$p_fail" -ge 3 ]; then
                 desired="_direct"
             fi
         fi
@@ -102,9 +104,9 @@ case "$current" in
     *)
         if [ "$p_good" -eq 1 ]; then
             desired="$PRIMARY"
-        elif [ "$p_fail" -ge 2 ] && [ "$b_good" -eq 1 ]; then
+        elif [ "$p_fail" -ge 3 ] && [ "$b_good" -eq 1 ]; then
             desired="$BACKUP"
-        elif [ "$p_fail" -ge 2 ] && [ "$b_fail" -ge 2 ]; then
+        elif [ "$p_fail" -ge 3 ] && [ "$b_fail" -ge 3 ]; then
             desired="_direct"
         fi
         ;;
