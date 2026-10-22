@@ -31,6 +31,10 @@ The 5-second delay is **in addition to** the execution time. Each cycle tests pr
 
 The old cron entry `* * * * * /usr/bin/passwall2-failover >/dev/null 2>&1` was removed to avoid two schedulers competing for the lock. The daily PassWall2 subscription refresh remains.
 
+## Boot/autostart test
+
+On 2026-10-22, the service was enabled (both `S99...` and `K10...` links existed) and reported `running` after a reboot. However, `ha_watchdog.main.mode` was `primary`, a persisted manual mode. The wrapper correctly forced `PusiSLgE` and exited early, so no periodic probe log was emitted. After setting the HA mode helper to `Авто`, UCI mode was `auto` and logs resumed: both nodes returned HTTP `204`, failure counters stayed at zero, and complete log cycles were roughly 10–11 seconds apart. Thus service autostart is confirmed; automatic failover/recovery after a controlled outage remains untested.
+
 ## Probe
 
 The core runs:
