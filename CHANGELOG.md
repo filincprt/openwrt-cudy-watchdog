@@ -74,3 +74,13 @@
 - Rewrote README as the project overview and linked deployment, troubleshooting, HA and AI handoff documents. Added `docs/DEPLOYMENT.md` and `docs/AI-PROMPT.md`.
 - Recorded that HA summaries are visible in the existing VPN dashboard and that current control mode was changed to `auto`; route was `PusiSLgE`.
 - This is a documentation/reference sync. Live route behavior and failover correctness still require a controlled outage/recovery test with local access available.
+
+
+## 2026-10-22 — documentation consolidation and AI handoff
+
+- Rewrote `README.md` as the project overview with capabilities, current reference state, limitations, safety rules, and source-of-truth policy.
+- Added/verified `docs/DEPLOYMENT.md` for adapting the watchdog with or without Home Assistant, with staged backups, checks, service setup, scheduling, and rollback guidance. `docs/INSTALL.md` now points to the canonical deployment guide to avoid two competing instructions.
+- Added `docs/AI-PROMPT.md` with explicit instructions for future AI assistants to read project context, separate observed facts from assumptions, preserve secrets, back up scripts, and update documentation.
+- Updated `docs/STATUS.md`, `docs/WATCHDOG.md`, `docs/HOME-ASSISTANT.md`, `docs/BACKUPS.md`, and `docs/DIAGNOSTICS.md` with the latest mode, telemetry dashboard confirmation, gate status, verification gaps, and safe diagnostic commands.
+- Synced the core and loop reference snapshots to the 15-second probe timeout, gated auto-mode metric publication, and 180–300 second manual-mode interval.
+- User-confirmed current UCI mode is `auto`; selected route is `PusiSLgE`. The gate/core passed shell syntax checks. Actual runtime separation between frequent health checks and slower telemetry publication still needs confirmation in logs; controlled outage/recovery test remains pending.
