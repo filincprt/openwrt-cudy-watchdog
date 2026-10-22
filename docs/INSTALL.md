@@ -51,7 +51,7 @@ The route-decision counters and metrics-only counters must remain separate. A me
 
 ### Important
 
-The scripts in `scripts/` are sanitized reference snapshots. Before deploying, compare each one with the live script from the reference installation and confirm it matches the intended version. The current telemetry publication-gate script is not yet included as a standalone complete installer in this repository. Do not infer missing script content or install an incomplete set.
+The scripts in `scripts/` are sanitized reference snapshots. Before deploying, compare each one with the live script from the reference installation and confirm it matches the intended version. The repository now includes a sanitized reference for the telemetry publication gate. It is still a reference snapshot: compare it with the live router before deployment, and do not infer that a matching filename guarantees matching contents.
 
 Recommended rollout order:
 
@@ -259,3 +259,8 @@ Do not force both nodes offline when remote SSH/LuCI depends on them. A controll
 5. Start/re-enable the service only after verifying route and mode.
 
 See [Backups and rollback](BACKUPS.md) and [Diagnostics](DIAGNOSTICS.md).
+
+
+## 7. Repository handoff / continuing with another AI
+
+Use [AI-PROMPT.md](AI-PROMPT.md) to transfer the project's durable context to another model. Always instruct the model to read the latest `STATUS.md` and `CHANGELOG.md` before making assumptions. Keep secrets and raw router backups out of the repository.
