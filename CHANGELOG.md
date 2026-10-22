@@ -42,3 +42,14 @@
 
 - After reboot, route/status initially showed direct connection, then the watchdog returned to primary automatically.
 - Follow-up UCI checks confirmed mode `auto` and selected PassWall2 route `PusiSLgE`. The watchdog did not remain pinned in manual `primary` mode.
+
+
+## 2026-10-22 — jitter and three-failure threshold deployed
+
+- Created router-side backups: `/usr/bin/passwall2-failover-core.bak-before-jitter`, `/usr/bin/passwall2-failover.bak-before-jitter`, and `/usr/bin/passwall2-failover-loop.bak-before-jitter`.
+- Changed failover/offline thresholds from 2 to 3 consecutive failed probe cycles in core and wrapper. Recovery remains 3 consecutive successful primary probes.
+- Replaced the fixed loop delay with a random 5–15 second pause using BusyBox `$RANDOM`.
+- Syntax checks passed for core, wrapper and loop; watchdog service restarted and reported `running`.
+- Logs showed some blank probe results and two consecutive cycles where both probes failed. The route did not change at failure count 2, as intended after the threshold increase.
+- Later, both probes repeatedly returned HTTP `204`, failure counters reset to zero, current route was `PusiSLgE`, and status was `primary` in mode `auto`.
+- User observed an automatic direct-to-primary recovery during this period. A controlled outage/recovery test remains pending.
