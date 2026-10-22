@@ -34,8 +34,17 @@ while :; do
             done
             ;;
     esac
-    RANDOM_VALUE="$RANDOM"
-    WAIT=$((5 + RANDOM_VALUE % 11))
+    case "$MODE" in
+        primary|backup|off)
+            RANDOM_VALUE="$RANDOM"
+            WAIT=$((180 + RANDOM_VALUE % 121))
+            ;;
+        *)
+            RANDOM_VALUE="$RANDOM"
+            WAIT=$((5 + RANDOM_VALUE % 11))
+            ;;
+    esac
+    logger -t passwall2-watchdog "Next cycle in ${WAIT}s (mode=${MODE:-auto})"
     sleep "$WAIT"
 done
 ```
@@ -53,7 +62,7 @@ On 2026-10-22, the service was enabled (both `S99...` and `K10...` links existed
 The core runs:
 
 ```sh
-/usr/bin/timeout -k 2 10 /usr/share/passwall2/test.sh url_test_node "$NODE_ID" urltest_node
+/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node "$NODE_ID" urltest_node
 ```
 
 A result beginning with HTTP 2xx/3xx and a colon is considered successful. The PassWall2 test script starts a temporary SOCKS proxy, waits 2 seconds, then runs curl with connect/max-time options. A hard timeout could theoretically leave child processes behind; after timeout events, inspect temporary processes and logs.
@@ -212,3 +221,16 @@ logread -e passwall2-watchdog | tail -n 40
 ```
 
 If `last_check` changes on every core cycle, inspect the gate/publisher call chain before making further changes. If core probe logs stop or the loop is stuck, prioritize restoring the last known-good core backup and validating the service.
+
+
+## Telemetry throttle — live change on 2026-10-22
+
+The live core now calls `/usr/bin/passwall2-watchdog-publish-due` instead of invoking the publisher on every automatic cycle. This helper keeps the last-publication timestamp and a randomized interval (180–300 seconds) in `/tmp/passwall2-failover-state/metrics_last_publish` and `metrics_interval`.
+
+- In `auto`, both node probes and failover decisions still run each core cycle (probe runtime plus a randomized 5–15 second loop pause). Only publishing the metrics into UCI is throttled to about every 3–5 minutes.
+- In manual `primary`, `backup`, and `off`, the wrapper does not run the core; the loop runs the separate metrics-only probe, then waits a randomized 180–300 seconds.
+- The live core and metrics-only probe use `timeout -k 2 15`.
+- The publisher calls `uci revert ha_watchdog_metrics` before staging a fresh set of values. This prevents an ever-growing `/tmp/.uci/ha_watchdog_metrics` delta. Metrics are intentionally not committed to flash on every update.
+- The live dashboard now displays the two summary strings in the existing VPN section. Last user-provided snapshot: primary online / HTTP 204 / RTT 300 ms / failures 0; backup online / HTTP 204 / RTT 367 ms / failures 0; timestamp `2026-10-22 22:37:42`.
+
+This reduces periodic metric publication, but it does **not** reduce automatic-mode health-probe frequency. It also does not guarantee avoidance of filtering or server blocking.
