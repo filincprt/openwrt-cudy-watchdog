@@ -51,6 +51,10 @@ The service reported `running`, and boot links `S99passwall2-failover-watchdog` 
 
 The live scripts use `PusiSLgE` as primary and `fAk268mE` as backup in both core and wrapper. HA mode `auto` means the watchdog is enabled; it does not mean PassWall2's currently selected route is a native URLTest/auto group. On recovery, current logic selects the hard-coded primary node ID. Manually selecting a different node in LuCI can be overridden by the next watchdog cycle. Subscription refreshes may alter internal node IDs; the current watchdog is not yet dynamic-role/subscription-safe.
 
+## Reboot recovery observation — 2026-10-22
+
+After a manual reboot, the displayed route initially showed direct connection and later switched to the primary node without a manual mode change. This is consistent with the watchdog holding direct while early-boot probes fail, then returning to the hard-coded primary after 3 consecutive successful primary probes. This was an observed recovery, though exact timestamps/logs from that specific transition were not captured in the message. It is useful evidence that recovery works in practice, but not a full controlled outage test.
+
 ## Important uncertainty
 
 A controlled test where both endpoints fail and then recover has not been done. Successful manual probes and repeated healthy logs do not by themselves prove every failure/recovery branch works. Test only while local access to LuCI or SSH is available.
