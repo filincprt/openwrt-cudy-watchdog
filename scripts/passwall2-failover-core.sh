@@ -27,7 +27,7 @@ inc() {
 }
 
 probe() {
-    PROBE_RESULT="$(/usr/bin/timeout -k 2 10 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
+    PROBE_RESULT="$(/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
     case "$PROBE_RESULT" in
         2[0-9][0-9]:*|3[0-9][0-9]:*) return 0 ;;
         *) return 1 ;;
@@ -68,7 +68,7 @@ echo "$p_fail" > "$STATE/p_fail"
 echo "$b_ok" > "$STATE/b_ok"
 echo "$b_fail" > "$STATE/b_fail"
 
-/usr/bin/passwall2-watchdog-publish-metrics "$p_result" "$p_ok" "$p_fail" "$b_result" "$b_ok" "$b_fail"
+/usr/bin/passwall2-watchdog-publish-due "$p_result" "$p_ok" "$p_fail" "$b_result" "$b_ok" "$b_fail"
 
 current="$(uci -q get "$CONF")"
 desired="$current"
