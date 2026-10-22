@@ -5,6 +5,9 @@
 - Core: `/usr/bin/passwall2-failover-core`
 - Wrapper: `/usr/bin/passwall2-failover`
 - Loop: `/usr/bin/passwall2-failover-loop`
+- Metrics publisher: `/usr/bin/passwall2-watchdog-publish-metrics`
+- Manual-mode metrics-only probe: `/usr/bin/passwall2-watchdog-probe-metrics`
+- Metrics UCI section: `ha_watchdog_metrics.nodes`
 - procd init script: `/etc/init.d/passwall2-failover-watchdog`
 - UCI state: `ha_watchdog.main.mode`, `ha_watchdog.main.status`
 - PassWall2 route: `passwall2.rulenode.default_node`
@@ -23,7 +26,17 @@ while :; do
     /usr/bin/passwall2-failover 2>&1 | while IFS= read -r line; do
         logger -t passwall2-watchdog "$line"
     done
-    sleep 5
+    MODE="$(uci -q get ha_watchdog.main.mode 2>/dev/null)"
+    case "$MODE" in
+        primary|backup|off)
+            /usr/bin/passwall2-watchdog-probe-metrics 2>&1 | while IFS= read -r line; do
+                logger -t passwall2-watchdog-metrics "$line"
+            done
+            ;;
+    esac
+    RANDOM_VALUE="$RANDOM"
+    WAIT=$((5 + RANDOM_VALUE % 11))
+    sleep "$WAIT"
 done
 ```
 
@@ -51,10 +64,10 @@ Both nodes returned `204` and exit code 0 in isolated tests after the timeout wr
 
 Counters are capped at 3 and stored in `/tmp/passwall2-failover-state`.
 
-- Current primary: after 2 consecutive primary failures, switch to backup if backup currently probes healthy; switch to direct if backup has also failed at least twice.
-- Current backup: return to primary after 3 consecutive primary successes; if backup fails at least twice, prefer a healthy primary; if both have failed at least twice, switch to direct.
+- Current primary: after 3 consecutive primary failures, switch to backup if backup currently probes healthy; switch to direct if backup has also failed at least 3 times.
+- Current backup: return to primary after 3 consecutive primary successes; if backup fails at least 3 times, prefer a healthy primary; if both have failed at least 3 times, switch to direct.
 - Current direct: return to primary after 3 consecutive primary successes; if primary is not yet at 3 but backup reaches 3 consecutive successes, use backup.
-- Unknown current node: prefer a healthy primary, otherwise backup after at least 2 primary failures when backup is healthy, otherwise direct after both have at least 2 failures.
+- Unknown current node: prefer a healthy primary, otherwise backup after at least 3 primary failures when backup is healthy, otherwise direct after both have at least 3 failures.
 
 After a route change the script commits UCI, restarts PassWall2, waits 2 seconds and validates the default Xray ACL config. If validation fails, it attempts to restore the previous route and restart PassWall2.
 
@@ -164,3 +177,10 @@ Live router change completed and syntax-checked:
 - The jitter changes probe scheduling predictability; they do not prove avoidance of external detection. The blank probe outputs still need root-cause investigation if they recur.
 
 No router code was changed as part of the earlier design discussion; the above is the subsequent live change recorded after implementation.
+
+
+## Metrics-only telemetry (2026-10-22)
+
+Automatic mode keeps the existing core probes and calls the metrics publisher after the core has updated its decision counters. In manual `primary`, `backup`, and `off` modes, the wrapper exits early, so the loop now separately invokes `/usr/bin/passwall2-watchdog-probe-metrics` after the wrapper returns. This script probes both configured nodes, updates the telemetry UCI values, and uses separate `metric_*` counters; it does not edit `passwall2.rulenode.default_node`, restart PassWall2, or modify the core's `p_ok/p_fail/b_ok/b_fail` decision counters.
+
+The publisher writes UCI staged values without committing the metrics config to flash on every cycle. HA reads `ha_watchdog_metrics.nodes`: `primary_result` / `backup_result` (raw HTTP-code:seconds output or `no-response`), `*_ok` (`online`/`offline`), `*_rtt_ms`, `*_failures`, `*_checked_at`, and `last_check`. These values are volatile and are reset after reboot until new checks run. Last validation in manual `primary` mode showed service `running`, both probes returning HTTP 204, and the selected route unchanged at `PusiSLgE`.
