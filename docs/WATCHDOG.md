@@ -184,3 +184,31 @@ No router code was changed as part of the earlier design discussion; the above i
 Automatic mode keeps the existing core probes and calls the metrics publisher after the core has updated its decision counters. In manual `primary`, `backup`, and `off` modes, the wrapper exits early, so the loop now separately invokes `/usr/bin/passwall2-watchdog-probe-metrics` after the wrapper returns. This script probes both configured nodes, updates the telemetry UCI values, and uses separate `metric_*` counters; it does not edit `passwall2.rulenode.default_node`, restart PassWall2, or modify the core's `p_ok/p_fail/b_ok/b_fail` decision counters.
 
 The publisher writes UCI staged values without committing the metrics config to flash on every cycle. HA reads `ha_watchdog_metrics.nodes`: `primary_result` / `backup_result` (raw HTTP-code:seconds output or `no-response`), `*_ok` (`online`/`offline`), `*_rtt_ms`, `*_failures`, `*_checked_at`, and `last_check`. These values are volatile and are reset after reboot until new checks run. Last validation in manual `primary` mode showed service `running`, both probes returning HTTP 204, and the selected route unchanged at `PusiSLgE`.
+
+
+## Telemetry throttling change — 2026-10-22
+
+The user asked to reduce repeated test traffic while preserving automatic failover. The intended split is:
+
+- In `auto`, the core continues probing primary and backup every full cycle and uses its existing counters/state machine. The core's metrics call now targets `/usr/bin/passwall2-watchdog-publish-due`, which should invoke the publisher only when the 180–300 second interval is due.
+- In manual `primary`, `backup`, or `off`, the wrapper exits before the core. The loop therefore calls `/usr/bin/passwall2-watchdog-probe-metrics` separately, then waits a random 180–300 seconds.
+- The auto loop pause remains random 5–15 seconds after each full cycle. Probe runtime is additional.
+- The gate stores its last publication epoch and interval under `/tmp/passwall2-failover-state/metrics_last_publish` and `metrics_interval`. These files reset on reboot.
+
+After installation, `sh -n` passed for the gate and core, and grep confirmed the core calls `publish-due`. The user selected `auto`; direct UCI checks confirmed `MODE=auto` and route `PusiSLgE`.
+
+**Runtime verification is still required.** Check at least two cycles: core probe logs should continue at the ordinary cadence, while `ha_watchdog_metrics.nodes.last_check` changes only when the publication gate opens. Syntax checks alone do not prove timing behavior.
+
+Read-only checks:
+
+```sh
+echo "MODE=$(uci -q get ha_watchdog.main.mode)"
+echo "ROUTE=$(uci -q get passwall2.rulenode.default_node)"
+/etc/init.d/passwall2-failover-watchdog status
+cat /tmp/passwall2-failover-state/metrics_last_publish 2>/dev/null
+cat /tmp/passwall2-failover-state/metrics_interval 2>/dev/null
+uci -q get ha_watchdog_metrics.nodes.last_check
+logread -e passwall2-watchdog | tail -n 40
+```
+
+If `last_check` changes on every core cycle, inspect the gate/publisher call chain before making further changes. If core probe logs stop or the loop is stuck, prioritize restoring the last known-good core backup and validating the service.
