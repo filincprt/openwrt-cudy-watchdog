@@ -41,6 +41,13 @@ Private operations notebook for the Cudy router and its Home Assistant integrati
 5. Do not reset/reflash the router as a first-line recovery step.
 6. This repo documents the state we observed. It is not proof that failure/recovery has been stress-tested; that test remains pending.
 
+## Boot/autostart test (2026-10-22)
+
+- The `procd` service was enabled and boot links were present. After a reboot, the service reported `running`.
+- The persisted mode was `primary` (manual pin), not `auto`; this made the wrapper force the primary node and exit without running the two health probes. The service being alive therefore did not mean health checks were running.
+- After changing the HA mode helper to `Авто`, `ha_watchdog.main.mode` became `auto` and the service resumed tests. Recent log cycles were about 10–11 seconds apart, both nodes returned HTTP `204`, and both failure counters stayed at 0.
+- Current target state: service enabled/running, mode `auto`, route `PusiSLgE`, status `primary`. Automatic failure/recovery stress test is still pending.
+
 ## Current schedule
 
 The old cron line `* * * * * /usr/bin/passwall2-failover >/dev/null 2>&1` was removed on 2026-10-22 after the procd service produced repeated successful probe logs. The daily subscription refresh is still in `/etc/crontabs/root`:
