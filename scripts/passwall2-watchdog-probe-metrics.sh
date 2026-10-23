@@ -2,10 +2,18 @@
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 PRIMARY="$(/usr/bin/passwall2-failover-resolve-primary)" || exit 1
-BACKUP="fAk268mE"
 STATE_DIR="/tmp/passwall2-failover-state"
 
 mkdir -p "$STATE_DIR"
+BACKUP="$(/usr/bin/passwall2-failover-resolve-backup 2>/dev/null)"
+BACKUP_RC=$?
+case "$BACKUP_RC" in
+    0) BACKUP_STATE="configured" ;;
+    2) BACKUP=""; BACKUP_STATE="not-configured" ;;
+    3) BACKUP=""; BACKUP_STATE="ambiguous" ;;
+    *) logger -t passwall2-failover "Backup resolver failed with rc=$BACKUP_RC"; exit 1 ;;
+esac
+/usr/bin/passwall2-watchdog-backup-state "$BACKUP_STATE" || logger -t passwall2-failover "Could not publish backup state"
 
 read_count() {
     n="$(cat "$STATE_DIR/$1" 2>/dev/null)"
@@ -53,20 +61,39 @@ else
     p_fail="$(inc "$p_fail")"
 fi
 
-if probe "$BACKUP"; then
-    b_result="$PROBE_RESULT"
-    b_ok="$(inc "$b_ok")"
-    b_fail=0
+if [ -n "$BACKUP" ]; then
+    if probe "$BACKUP"; then
+        b_result="$PROBE_RESULT"
+        b_ok="$(inc "$b_ok")"
+        b_fail=0
+    else
+        b_result="$PROBE_RESULT"
+        b_ok=0
+        b_fail="$(inc "$b_fail")"
+    fi
 else
-    b_result="$PROBE_RESULT"
+    b_result="$BACKUP_STATE"
     b_ok=0
-    b_fail="$(inc "$b_fail")"
+    b_fail=0
 fi
 
 echo "$p_ok" > "$STATE_DIR/metric_p_ok"
 echo "$p_fail" > "$STATE_DIR/metric_p_fail"
 echo "$b_ok" > "$STATE_DIR/metric_b_ok"
 echo "$b_fail" > "$STATE_DIR/metric_b_fail"
+
+if [ "$p_fail" -ge 3 ]; then
+    /usr/bin/passwall2-watchdog-node-state primary offline "Основной" || true
+else
+    /usr/bin/passwall2-watchdog-node-state primary online "Основной" || true
+fi
+if [ -n "$BACKUP" ]; then
+    if [ "$b_fail" -ge 3 ]; then
+        /usr/bin/passwall2-watchdog-node-state backup offline "Резервный" || true
+    else
+        /usr/bin/passwall2-watchdog-node-state backup online "Резервный" || true
+    fi
+fi
 
 /usr/bin/passwall2-watchdog-publish-metrics "$p_result" "$p_ok" "$p_fail" "$b_result" "$b_ok" "$b_fail"
 
