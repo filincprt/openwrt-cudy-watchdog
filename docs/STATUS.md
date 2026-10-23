@@ -1,6 +1,6 @@
 # Current status snapshot
 
-Last update: **2026-10-22**. This is a record of observed output, not a claim that every failure branch has been stress-tested.
+Last update: **2026-10-23**. This is a record of observed output, not a claim that every failure branch has been stress-tested.
 
 ## Reference hardware and network
 
@@ -15,7 +15,7 @@ Last update: **2026-10-22**. This is a record of observed output, not a claim th
 
 | Item | Value / status |
 |---|---|
-| `ha_watchdog.main.mode` | `auto` — explicitly confirmed by user after selecting Auto in Home Assistant |
+| `ha_watchdog.main.mode` | `primary` — current user-selected mode after repeated false failovers; automatic routing is intentionally paused |
 | `passwall2.rulenode.default_node` | `PusiSLgE` — primary route confirmed at the same check |
 | Watchdog service | Reported `running` in the last service checks |
 | Probe timeout | `/usr/bin/timeout -k 2 15` in live core and metrics-only checker |
@@ -24,7 +24,7 @@ Last update: **2026-10-22**. This is a record of observed output, not a claim th
 | Primary recovery threshold | Three consecutive successful primary probes |
 | Manual-mode telemetry interval | Random 180–300 seconds after the loop change |
 | Auto-mode metric publication gate | Script connected to core and passed shell syntax checks; runtime interval still needs verification |
-| Home Assistant metrics | Existing VPN section showed primary and backup summaries; latest example at 22:37:42 had HTTP 204, RTT 300/367 ms, failures 0 |
+| Home Assistant metrics | Latest snapshot at 2026-10-23 16:10:46: primary HTTP 204 / RTT 313 ms / 0 failures; backup HTTP 204 / RTT 337 ms / 0 failures |
 | Controlled outage test | Pending |
 
 The full cycle time is probe execution plus the pause. Two probes run sequentially; if either times out, the cycle may take longer. Do not equate a 5–15 second pause with a 5–15 second total cycle.
@@ -79,7 +79,7 @@ The HTTP 204 probe only proves that the configured test request succeeded throug
 
 ## Next safe steps
 
-1. Read-only verify that `mode=auto`, route and service status are still correct.
+1. Read-only verify that `mode=primary`, route and service status are still correct while protection is being prepared.
 2. Observe logs across at least two complete cycles and compare the time between health-probe log lines with `last_check` changes.
 3. Verify the publication gate's interval files and that health probes are not skipped.
 4. Only then record the new cadence as runtime-verified.
