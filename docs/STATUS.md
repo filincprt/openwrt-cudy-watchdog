@@ -1,6 +1,6 @@
 # Current status snapshot
 
-Last update: **2026-10-23**. This is a record of observed output, not a claim that every failure branch has been stress-tested.
+Last update: **2026-10-24**. This is a record of observed output, not a claim that every failure branch has been stress-tested.
 
 ## Reference hardware and network
 
@@ -16,7 +16,7 @@ Last update: **2026-10-23**. This is a record of observed output, not a claim th
 | Item | Value / status |
 |---|---|
 | `ha_watchdog.main.mode` | `auto` — automatic routing enabled |
-| `passwall2.rulenode.default_node` | `tLUhZHkw` — current Netherlands primary route after subscription refresh |
+| `passwall2.rulenode.default_node` | `AnMllbuc` — current/target route observed in the latest supplied logs (2026-10-23 23:41 router time) |
 | Primary resolver | `/usr/bin/passwall2-failover-resolve-primary`; requires exactly one imported node with `group=stealthsurf` |
 | Watchdog service | Reported `running` in the last service checks |
 | Probe timeout | `/usr/bin/timeout -k 2 15` in live core and metrics-only checker |
@@ -29,6 +29,15 @@ Last update: **2026-10-23**. This is a record of observed output, not a claim th
 | Controlled outage test | Pending |
 
 The full cycle time is probe execution plus the pause. Two probes run sequentially; if either times out, the cycle may take longer. Do not equate a 5–15 second pause with a 5–15 second total cycle.
+
+## Latest verification — 2026-10-24
+
+- User switched `input_select.passwall2_mode` back to **Auto**; direct UCI read returned `auto`. The watchdog was restarted to clear a stale long sleep from the previous manual `primary` mode.
+- Fresh logs at 23:35 and 23:41 showed `mode=auto`, primary and backup results `204`, `ok=3 fail=0` for both, and `Current: AnMllbuc; target: AnMllbuc`. Observed next-cycle pauses were about 9–15 seconds plus probe runtime.
+- The live event helper writes `event_code`, `event_message`, `event_at`, and `event_id` to `ha_watchdog.main`, then posts to the HA webhook URL extracted from the locally installed wrapper. The live URL/token is not stored in Git.
+- The HA webhook automation successfully updated `input_text.passwall2_last_event` and `input_text.passwall2_last_event_id`. A synthetic node `offline` → `online` test delivered two push notifications to the Samsung A50 and PC; it did not simulate a real network outage or route change. TECNO and the second Samsung were not targeted.
+- Station quiet-hour helpers are configured in HA: `input_boolean.passwall2_station_announcements`, `input_datetime.asswall2_station_start_time` (the entity ID contains the typo `asswall2`), and `input_datetime.passwall2_station_end_time`. The selected window was 08:00–23:00 and the toggle was on. Actual TTS during allowed hours has not yet been verified. A pre-existing separate voice automation may bypass the new guard unless its own conditions are also updated or the automation is disabled.
+- **Still pending:** controlled real outage/recovery, confirmation of route-switch events under a genuine failure, allowed-window TTS test, and confirmation that every independently enabled voice automation respects quiet hours.
 
 ## Live script paths
 
