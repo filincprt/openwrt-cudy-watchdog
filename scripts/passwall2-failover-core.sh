@@ -27,10 +27,18 @@ inc() {
 }
 
 probe() {
+    PROBE_RETRIED=0
     PROBE_RESULT="$(/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
     case "$PROBE_RESULT" in
         2[0-9][0-9]:*|3[0-9][0-9]:*) return 0 ;;
-        *) return 1 ;;
+    esac
+    PROBE_RETRIED=1
+    logger -t passwall2-failover "First probe failed for $1: ${PROBE_RESULT:-no-response}; retrying"
+    sleep 2
+    PROBE_RESULT="$(/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
+    case "$PROBE_RESULT" in
+        2[0-9][0-9]:*|3[0-9][0-9]:*) return 0 ;;
+        *) logger -t passwall2-failover "Probe failed after retry for $1: ${PROBE_RESULT:-no-response}"; return 1 ;;
     esac
 }
 
@@ -112,6 +120,19 @@ case "$current" in
         ;;
 esac
 
+if [ "$current" = "$BACKUP" ] && [ "$desired" = "$PRIMARY" ] && [ "$b_fail" -lt 3 ]; then
+    now="$(date +%s)"
+    last_switch="$(cat "$STATE/last_switch_to_backup" 2>/dev/null)"
+    case "$last_switch" in ""|*[!0-9]*) last_switch=0 ;; esac
+    if [ "$last_switch" -gt 0 ]; then
+        elapsed=$((now - last_switch))
+        if [ "$elapsed" -ge 0 ] && [ "$elapsed" -lt 600 ]; then
+            desired="$BACKUP"
+            logger -t passwall2-failover "Holding backup during recovery cooldown: $((600 - elapsed))s remaining"
+        fi
+    fi
+fi
+
 echo "Primary: $p_result; ok=$p_ok fail=$p_fail"
 echo "Backup:  $b_result; ok=$b_ok fail=$b_fail"
 echo "Current: $current; target: $desired"
@@ -128,6 +149,7 @@ if [ "$desired" != "$current" ]; then
         uci commit passwall2
         /etc/init.d/passwall2 restart
     else
+        [ "$desired" = "$BACKUP" ] && date +%s > "$STATE/last_switch_to_backup"
         logger -t passwall2-failover "Route changed: $current -> $desired"
     fi
 fi
