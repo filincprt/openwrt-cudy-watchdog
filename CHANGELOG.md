@@ -101,3 +101,12 @@
 - Added cleanup of the allocated temporary-port cache key to both scripts; both passed sh -n. Removed only stale cache keys 48900–49151, preserving other keys.
 - Post-fix primary and backup probes returned HTTP 204; HA summaries showed both online with zero failures and RTT 325/369 ms. Port-key count remained four.
 - Mode remains primary. Long-run auto stability and controlled failover/recovery are not yet verified.
+
+
+## 2026-10-23 — post-fix verification and diagnostic cleanup
+
+- With mode set to `primary`, watchdog reported `running` and route remained `PusiSLgE`.
+- Logs showed both-node test timeouts before cleanup at 15:44 and 15:48, followed by successful HTTP 204 probes for both nodes at 15:52, 15:56, 16:01, 16:05 and 16:10.
+- HA telemetry at 16:10:46 showed primary RTT 313 ms and backup RTT 337 ms, both online with zero failures. Runtime port-cache count stayed at 4.
+- Removed temporary trace / diagnostic JSON and the stale runtime cache backup after use. Kept the original pre-fix test scripts and important SSH/cron recovery copies.
+- Auto mode remains unverified after the fix; long-duration monitoring and controlled failover/recovery are still pending.
