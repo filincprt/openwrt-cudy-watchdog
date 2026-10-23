@@ -104,3 +104,12 @@ Related: [Watchdog](WATCHDOG.md), [Home Assistant](HOME-ASSISTANT.md), [Diagnost
 Investigated node-test timeouts (exit code 124) while real traffic through the primary route continued to work. Shell tracing showed get_new_port() looping between cached ports 49150 and 49151 after the temporary-test cache filled: /tmp/etc/passwall2/var had 256 get_port_* keys spanning 48900–49151. The diagnostic JSON passed Xray config validation.
 
 Before editing, backups were created for the live test.sh, socks_auto_switch.sh and runtime cache. Added del_cache_var for the allocated temporary port after cleanup in both test scripts; sh -n passed for each. Removed only stale cache keys 48900–49151 and retained unrelated entries 2001–2004. Primary tests returned HTTP 204 twice, backup returned HTTP 204, and the metrics-only check refreshed HA summaries to primary 325 ms / backup 369 ms / zero failures at 2026-10-23 15:58:01. The port-key count remained 4 after tests. The selected mode remains primary; overnight auto stability and controlled failover/recovery remain unverified.
+
+
+## Post-cleanup stability observation — 2026-10-23 16:10
+
+Read-only router checks after the cache fix showed mode `primary`, route `PusiSLgE`, and watchdog service `running`. The `get_port_*` cache count remained 4. HA summaries at `2026-10-23 16:10:46` showed primary online / HTTP 204 / RTT 313 ms / failures 0 and backup online / HTTP 204 / RTT 337 ms / failures 0.
+
+Logs show both metrics probes returning `no-response` with fail=3 at 15:44 and 15:48 (before the successful post-cleanup run sequence), followed by successful HTTP 204 checks for both nodes at 15:52, 15:56, 16:01, 16:05 and 16:10. This supports the temporary-port cache fix. It is a short observation window, not an overnight or controlled failover/recovery test. Keep mode `primary` until a longer stable window is observed.
+
+Cleanup completed: temporary diagnostic trace, diagnostic JSON and the old cache copy were removed after their diagnostic use. Keep the two `*.bak-before-port-cache-fix` script originals and the ordinary SSH/cron recovery copies until the fix is considered stable. The earlier pending-cleanup note is superseded by this observation.
