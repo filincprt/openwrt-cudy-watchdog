@@ -86,17 +86,17 @@ After a route change the script commits UCI, restarts PassWall2, waits 2 seconds
 - `passwall2.rulenode.default_node` is the selected route target. In this implementation the core switches this field among the hard-coded primary ID, hard-coded backup ID and `_direct`. It does **not** select a PassWall2 native URLTest node/group on recovery.
 - `ha_watchdog.main.status` is a reported state such as `primary`, `backup`, `direct` or `offline`; it is not the control mode.
 
-## Hard-coded node IDs and subscription risk
+## Primary ID resolution and subscription refresh
 
-The live core currently declares `PRIMARY="PusiSLgE"` and `BACKUP="fAk268mE"`; the wrapper also uses those literals for manual `primary` and `backup` modes. Therefore changing the active route in LuCI does not update the watchdog's semantic primary/backup roles; in `auto` mode an unfamiliar current ID falls into the default branch and can be replaced by the hard-coded primary if its probe is healthy. A subscription refresh may recreate nodes with different internal UCI IDs, so a static ID must not be assumed permanent.
+The primary role is now resolved dynamically by `/usr/bin/passwall2-failover-resolve-primary`. It looks for exactly one imported PassWall2 node (`add_mode=2`) whose `group` is `stealthsurf`. If zero or multiple nodes match, the helper logs an error and exits instead of guessing or using a stale primary ID. This assumes that `stealthsurf` contains exactly one imported node; if the provider starts returning multiple nodes in that group, refine the resolver before proceeding.
 
-Before changing the design, inspect the actual installed `/etc/config/passwall2` node sections and remarks. A safer future design should resolve role IDs from configurable stable node remarks or a configured PassWall2 URLTest group, log missing/ambiguous matches, and fail safe instead of forcing a stale ID. Exact-remark resolution depends on those remarks remaining stable. A native URLTest group is a different policy: PassWall2 chooses among its members and may not always select the preferred primary.
+The backup still uses the fixed ID `fAk268mE` (subscription group `rezerv-stealthsurf`); backup-ID resolution is not yet dynamic. On 2026-10-23, primary subscription refreshes changed the primary ID from `PusiSLgE` to `4m4hltgt`, then to `tLUhZHkw` for the Netherlands node. The resolver found each current ID without editing the core/metrics scripts. Do not treat the observed ID as permanent.
 
 ## Mode handling in wrapper
 
 - `auto`: removes the manual-off marker and runs core.
-- `primary`: forces `PusiSLgE`.
-- `backup`: forces `fAk268mE`.
+- `primary`: resolves and forces the one imported node in group `stealthsurf`.
+- `backup`: forces `fAk268mE` (still a fixed backup ID).
 - `off`: creates `/etc/passwall2-vpn-manual-off` and forces `_direct`.
 
 The wrapper updates `ha_watchdog.main.status` and calls the Home Assistant webhook only when status changes. The live webhook token is intentionally **not** stored here. The repository wrapper file is a sanitized template, not a drop-in replacement.
