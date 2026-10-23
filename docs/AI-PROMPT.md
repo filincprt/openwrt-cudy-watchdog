@@ -38,7 +38,7 @@ This is a shell-based OpenWrt + PassWall2 watchdog that checks two proxy nodes a
 - Auto loop pause is random 5–15 seconds after the completed probe cycle. Telemetry publishing in auto mode is throttled by `/usr/bin/passwall2-watchdog-publish-due` to about every 180–300 seconds; health probes still run every core cycle. In manual modes, the loop probes metrics about every 180–300 seconds.
 - Telemetry UCI section: `ha_watchdog_metrics.nodes`; summary options: `primary_summary` and `backup_summary`. Metrics are staged without committing every update to flash; values are volatile across reboot until fresh checks occur.
 - HA: user has a UI-only configuration preference and does not edit `configuration.yaml` or server files manually. The installed HA was version 2026.2.3 and `ha-openwrt` 2.4.7 was the known working version. Existing VPN dashboard/helpers are preferred; do not create a separate dashboard unnecessarily.
-- Current mode was most recently set to `auto`; route last confirmed `PusiSLgE`. Re-check live values before acting.
+- Latest user-confirmed mode is `primary` and route is `PusiSLgE` as of 2026-10-23. Automatic mode is intentionally paused after false failovers caused by probe timeouts. A fix for cached temporary test-port exhaustion was applied to live `/usr/share/passwall2/test.sh` and `socks_auto_switch.sh`; both passed `sh -n`, and repeated post-fix probes returned HTTP 204. Latest HA metrics: primary RTT 313 ms, backup RTT 337 ms, both failures 0; cached port-key count stayed at four. Do not return to `auto` until protection is designed/applied and long-run behavior can be observed. Re-check live state before acting.
 
 ## Response / workflow preferences
 - Respond in Russian unless asked otherwise; direct and practical.
