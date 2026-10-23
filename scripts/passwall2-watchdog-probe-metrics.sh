@@ -1,7 +1,7 @@
 #!/bin/sh
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
-PRIMARY="PusiSLgE"
+PRIMARY="$(/usr/bin/passwall2-failover-resolve-primary)" || exit 1
 BACKUP="fAk268mE"
 STATE_DIR="/tmp/passwall2-failover-state"
 
