@@ -48,3 +48,8 @@ This is a shell-based OpenWrt + PassWall2 watchdog that checks two proxy nodes a
 - When troubleshooting, first collect current state/logs, then suggest the smallest safe next step. Avoid pretending uncertain causes are established facts.
 
 Your first response should briefly summarize the current architecture and list the most important unresolved risks/tests, citing the exact repository files you read. Do not change anything until asked.
+
+
+## New protection caveat — 2026-10-23
+
+The port-cache fix was verified with repeated successful HTTP 204 probes and a stable cache count of four. However, the live PassWall2 scripts currently remove the temporary port key on the normal cleanup path; an external timeout may terminate `test.sh` before that cleanup line executes. Do not claim timeout-path cleanup is fully solved yet. Before re-enabling `auto`, inspect/add safe signal cleanup, test both normal and timeout paths, and then implement a one-time confirmation probe for failed tests plus a recovery hold-down to reduce rapid route reversals. Current mode last confirmed by the user is `primary` with route `PusiSLgE`.
