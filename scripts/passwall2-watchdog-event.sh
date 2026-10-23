@@ -35,7 +35,7 @@ logger -t passwall2-watchdog-event "$CODE: $MESSAGE"
 # Read the secret webhook URL from the locally installed wrapper at runtime.
 # Never print or commit the active webhook URL/token.
 WRAPPER="/usr/bin/passwall2-failover"
-HA_WEBHOOK_URL="$(sed -n 's@.*-X POST \(http[^ ]*/api/webhook/[^ ]*\).*@\1@p' "$WRAPPER" 2>/dev/null | head -n 1)"
+HA_WEBHOOK_URL="$(sed -n -e 's@^[[:space:]]*HA_WEBHOOK_URL="\(http[^"]*/api/webhook/[^"]*\)".*@\1@p' -e 's@.*-X POST \(http[^ ]*/api/webhook/[^ ]*\).*@\1@p' "$WRAPPER" 2>/dev/null | head -n 1)"
 case "$HA_WEBHOOK_URL" in
     http*/api/webhook/*)
         case "$HA_WEBHOOK_URL" in
