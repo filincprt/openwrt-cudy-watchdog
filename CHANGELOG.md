@@ -1,5 +1,13 @@
 # Change log
 
+## 2026-10-23 — dynamic primary ID after subscription refresh
+
+- Added `scripts/passwall2-failover-resolve-primary.sh`: resolve the current primary from exactly one imported node with `add_mode=2` and `group=stealthsurf`; fail closed on zero or ambiguous matches.
+- Updated the core, metrics-only probe and sanitized wrapper template to use the resolver rather than hard-code the primary ID. The backup ID remains fixed at `fAk268mE`.
+- Live primary ID changed from `PusiSLgE` to `4m4hltgt` (Finland), then `tLUhZHkw` (Netherlands) after subscription refreshes. The resolver tracked the changes.
+- In `auto`, both nodes returned HTTP 204 and the watchdog logged the natural post-cooldown route change from backup to `tLUhZHkw` at 20:50:59 on 2026-10-23. User reports YouTube appears to load better via Netherlands; no numeric post-change speed was recorded.
+- A deliberately controlled outage/recovery test remains pending.
+
 ## 2026-10-22 — initial documented snapshot
 
 - Recorded OpenWrt 25.12.6 on Cudy WR3000S AX3000 V2.
