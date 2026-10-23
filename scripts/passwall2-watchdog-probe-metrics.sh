@@ -23,10 +23,18 @@ inc() {
 }
 
 probe() {
+    PROBE_RETRIED=0
     PROBE_RESULT="$(/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
     case "$PROBE_RESULT" in
         2[0-9][0-9]:*|3[0-9][0-9]:*) return 0 ;;
-        *) return 1 ;;
+    esac
+    PROBE_RETRIED=1
+    logger -t passwall2-failover "First metrics probe failed for $1: ${PROBE_RESULT:-no-response}; retrying"
+    sleep 2
+    PROBE_RESULT="$(/usr/bin/timeout -k 2 15 /usr/share/passwall2/test.sh url_test_node "$1" urltest_node 2>/dev/null)"
+    case "$PROBE_RESULT" in
+        2[0-9][0-9]:*|3[0-9][0-9]:*) return 0 ;;
+        *) logger -t passwall2-failover "Metrics probe failed after retry for $1: ${PROBE_RESULT:-no-response}"; return 1 ;;
     esac
 }
 
