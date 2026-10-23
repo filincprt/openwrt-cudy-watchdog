@@ -1,0 +1,108 @@
+# SANITIZED REFERENCE TEMPLATE ONLY.
+# Replace every REPLACE_* placeholder and entity ID with values from your HA instance.
+# Never commit a real webhook_id: it is a secret capability token.
+
+alias: PassWall2 — событие от роутера webhook
+description: Update status, send deduplicated push, and apply Station quiet hours
+triggers:
+  - trigger: webhook
+    webhook_id: REPLACE_WITH_RANDOM_WEBHOOK_ID
+    allowed_methods:
+      - POST
+    local_only: true
+
+conditions: []
+
+actions:
+  - action: openwrt.uci_get
+    data:
+      entry_id: REPLACE_WITH_OPENWRT_INTEGRATION_ENTRY_ID
+      config: ha_watchdog
+      section: main
+      option: status
+    response_variable: pw_status
+
+  - action: input_select.select_option
+    target:
+      entity_id: input_select.passwall2_status
+    data:
+      option: >-
+        {{ {
+          'primary': 'Основной узел',
+          'backup': 'Резервный узел',
+          'manual_off': 'VPN отключён вручную',
+          'direct': 'Прямое подключение',
+          'offline': 'Оба узла недоступны'
+        }.get(pw_status.value | default('unknown'), 'Неизвестно') }}
+
+  - action: openwrt.uci_get
+    data:
+      entry_id: REPLACE_WITH_OPENWRT_INTEGRATION_ENTRY_ID
+      config: ha_watchdog
+      section: main
+      option: event_message
+    response_variable: pw_event_message
+
+  - action: openwrt.uci_get
+    data:
+      entry_id: REPLACE_WITH_OPENWRT_INTEGRATION_ENTRY_ID
+      config: ha_watchdog
+      section: main
+      option: event_id
+    response_variable: pw_event_id
+
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.passwall2_last_event
+    data:
+      value: "{{ pw_event_message.value | default('Нет данных', true) }}"
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ (pw_event_id.value | default('', true) | string)
+                 not in ['', 'unknown', 'unavailable',
+                 states('input_text.passwall2_last_event_id')] }}
+        sequence:
+          - action: notify.mobile_app_REPLACE_WITH_PHONE
+            data:
+              title: "PassWall2 — событие роутера"
+              message: "{{ pw_event_message.value | default('Новое событие', true) }}"
+
+          - action: notify.mobile_app_REPLACE_WITH_COMPUTER
+            data:
+              title: "PassWall2 — событие роутера"
+              message: "{{ pw_event_message.value | default('Новое событие', true) }}"
+
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: input_boolean.passwall2_station_announcements
+                    state: "on"
+                  - condition: template
+                    value_template: >-
+                      {% set start = states('input_datetime.passwall2_station_start_time') %}
+                      {% set end_time = states('input_datetime.passwall2_station_end_time') %}
+                      {% set current_time = now().strftime('%H:%M:%S') %}
+                      {{ start not in ['unknown', 'unavailable', 'none', '']
+                         and end_time not in ['unknown', 'unavailable', 'none', '']
+                         and start <= current_time < end_time }}
+                sequence:
+                  - action: media_player.play_media
+                    target:
+                      entity_id: media_player.REPLACE_WITH_YANDEX_STATION_ENTITY
+                    data:
+                      media_content_id: >-
+                        {{ (pw_event_message.value
+                            | default('Новое событие PassWall2', true)
+                            | string)[:100] }}
+                      media_content_type: text
+
+  - action: input_text.set_value
+    target:
+      entity_id: input_text.passwall2_last_event_id
+    data:
+      value: "{{ pw_event_id.value | default('', true) }}"
+
+mode: restart
