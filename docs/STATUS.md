@@ -97,3 +97,10 @@ Related: [Watchdog](WATCHDOG.md), [Home Assistant](HOME-ASSISTANT.md), [Diagnost
 - The existing Home Assistant VPN section now shows `input_text.passwall2_primary_metrics` and `input_text.passwall2_backup_metrics`. Latest user-provided dashboard snapshot at 22:37:42 showed both nodes online, HTTP 204, 0 failures, RTT 300 ms primary / 367 ms backup.
 - The publisher runs `uci revert ha_watchdog_metrics` before setting current values. A bounded staged delta of 722 bytes was verified previously, avoiding repeated accumulation in `/tmp/.uci/ha_watchdog_metrics`.
 - Remaining important risks: node IDs remain hard-coded; no controlled outage/recovery test has been performed; earlier `no-response` results were not conclusively diagnosed; automatic mode probes still run every cycle and jitter does not guarantee protection against server blocking.
+
+
+## Temporary test-port cache fix — 2026-10-23
+
+Investigated node-test timeouts (exit code 124) while real traffic through the primary route continued to work. Shell tracing showed get_new_port() looping between cached ports 49150 and 49151 after the temporary-test cache filled: /tmp/etc/passwall2/var had 256 get_port_* keys spanning 48900–49151. The diagnostic JSON passed Xray config validation.
+
+Before editing, backups were created for the live test.sh, socks_auto_switch.sh and runtime cache. Added del_cache_var for the allocated temporary port after cleanup in both test scripts; sh -n passed for each. Removed only stale cache keys 48900–49151 and retained unrelated entries 2001–2004. Primary tests returned HTTP 204 twice, backup returned HTTP 204, and the metrics-only check refreshed HA summaries to primary 325 ms / backup 369 ms / zero failures at 2026-10-23 15:58:01. The port-key count remained 4 after tests. The selected mode remains primary; overnight auto stability and controlled failover/recovery remain unverified.
