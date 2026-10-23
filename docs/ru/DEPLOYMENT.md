@@ -81,15 +81,16 @@ Home Assistant необязателен: watchdog может работать ч
 
 | Файл репозитория | Путь на роутере |
 |---|---|
+| `scripts/passwall2-failover-resolve-primary.sh` | `/usr/bin/passwall2-failover-resolve-primary` |
 | `scripts/passwall2-failover-core.sh` | `/usr/bin/passwall2-failover-core` |
 | `scripts/passwall2-failover-loop.sh` | `/usr/bin/passwall2-failover-loop` |
 | `scripts/passwall2-failover-watchdog.init` | `/etc/init.d/passwall2-failover-watchdog` |
 | `scripts/passwall2-failover.sh.example` | `/usr/bin/passwall2-failover` после локальной адаптации |
 
-Устанавливайте все три скрипта метрик вместе только после изучения их текущих эталонных версий и цепочки вызовов. Не заменяйте новую рабочую версию старым снимком вслепую.
+В этой версии резолвер основного узла обязателен для ядра, оболочки режимов и проверки метрик. Перед установкой адаптируйте `GROUP="stealthsurf"` под точное значение поля группы своих узлов PassWall2. Резолвер завершает работу с ошибкой, если найдено не ровно одно совпадение. Устанавливайте скрипты метрик только после изучения их актуальных эталонных версий и цепочки вызовов. Не заменяйте новую рабочую версию старым снимком вслепую.
 
 ```sh
-chmod 755 /usr/bin/passwall2-failover-core /usr/bin/passwall2-failover-loop /usr/bin/passwall2-failover
+chmod 755 /usr/bin/passwall2-failover-resolve-primary /usr/bin/passwall2-failover-core /usr/bin/passwall2-failover-loop /usr/bin/passwall2-failover
 chmod 755 /etc/init.d/passwall2-failover-watchdog
 sh -n /usr/bin/passwall2-failover-core
 sh -n /usr/bin/passwall2-failover
