@@ -248,3 +248,13 @@ This strongly supports cache exhaustion as the cause of prior timeouts but does 
 ## Protection work still pending — 2026-10-23
 
 A subtle cleanup gap remains after the first cache fix: `del_cache_var` runs after the normal temporary-file cleanup in the live PassWall2 test scripts. If the external `timeout -k 2 15` kills `test.sh` before that line, the port mark may remain. Before trusting `auto`, make test cleanup robust to interruption, verify stale-key handling does not affect unrelated PassWall2 ports, then add failure confirmation and a hold-down on recovery to the preferred primary. These protections have not yet been deployed. Preserve the current `primary` mode until those changes are reviewed and checked.
+
+
+## Protection implementation update — 2026-10-23
+
+This supersedes the earlier “Protection work still pending” note, which described the state before implementation.
+
+- The live PassWall2 `test.sh` now installs cleanup traps after the temporary port is allocated. On termination it cleans the associated temporary process and files and removes only that probe's cache key. Shell syntax passed; an intentionally interrupted probe returned 124 and left no matching temporary files. The cache showed only the unrelated port keys 2001–2004 afterward.
+- The live failover core and metrics-only probe retry once after a failed probe, with a 2-second pause. Both scripts passed shell syntax checks. The latest metrics-only run returned HTTP 204 for both nodes, primary RTT about 293 ms and backup about 377 ms, with `ok=3 fail=0` for both.
+- The core contains a 600-second recovery hold-down before an ordinary backup-to-primary return; three consecutive backup failures plus a currently healthy primary probe bypass it. This routing branch has only passed syntax review, not a live controlled failover test.
+- The operator-confirmed mode and route remain `primary` / `PusiSLgE`. Keep automatic mode disabled until retry behavior and the hold-down branch are safely verified. A controlled outage/recovery and longer stability window remain pending.
