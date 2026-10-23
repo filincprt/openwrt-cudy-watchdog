@@ -234,3 +234,12 @@ The live core now calls `/usr/bin/passwall2-watchdog-publish-due` instead of inv
 - The live dashboard now displays the two summary strings in the existing VPN section. Last user-provided snapshot: primary online / HTTP 204 / RTT 300 ms / failures 0; backup online / HTTP 204 / RTT 367 ms / failures 0; timestamp `2026-10-22 22:37:42`.
 
 This reduces periodic metric publication, but it does **not** reduce automatic-mode health-probe frequency. It also does not guarantee avoidance of filtering or server blocking.
+
+
+## Temporary test-port cache exhaustion fix — 2026-10-23
+
+The node test timed out with exit code 124 although primary-route traffic worked. Trace showed get_new_port() cycling between cached ports 49150 and 49151. The runtime cache had 256 get_port_* entries spanning 48900–49151; a generated diagnostic JSON passed Xray config validation.
+
+Backups were made before changes. The live /usr/share/passwall2/test.sh and /usr/share/passwall2/socks_auto_switch.sh now call del_cache_var for the allocated temporary test port after removing temporary test artifacts. Both passed sh -n. Stale keys in 48900–49151 were removed while unrelated keys 2001–2004 remained; the runtime cache was backed up before cleanup. Post-fix primary tests returned HTTP 204 (about 358/349 ms), the backup returned HTTP 204 (about 291 ms), and metrics refreshed HA to primary HTTP 204 / RTT 325 ms / failures 0 and backup HTTP 204 / RTT 369 ms / failures 0 at 2026-10-23 15:58:01. Key count remained 4 after tests.
+
+This strongly supports cache exhaustion as the cause of prior timeouts but does not yet prove long-run auto stability. Keep mode primary until stability is observed; the controlled outage/recovery test remains pending.
