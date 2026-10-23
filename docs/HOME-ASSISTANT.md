@@ -1,6 +1,6 @@
 # Home Assistant integration
 
-Sanitized reference as of 2026-10-22. No working webhook token is included.
+Sanitized reference updated 2026-10-23. No working webhook token is included.
 
 ## Home Assistant host / integration
 
@@ -15,7 +15,7 @@ Sanitized reference as of 2026-10-22. No working webhook token is included.
 UCI configuration on router:
 - `ha_watchdog.main.mode`: `auto`, `primary`, `backup`, or `off`.
 - `ha_watchdog.main.status`: `primary`, `backup`, `manual_off`, `direct`, `offline`, or `unknown`.
-- Latest observed `ha_watchdog.main.mode` is `auto`, selected route `PusiSLgE` (confirmed 2026-10-22 after enabling automatic failover).
+- Latest user-confirmed state on 2026-10-23: `ha_watchdog.main.mode=primary`, selected route `PusiSLgE`. Auto mode was disabled after repeated false failovers while node-test probes timed out; do not assume `auto` is currently active.
 - Wrapper webhook URL path is `/api/webhook/<REDACTED>`; do not copy the real token into this repository.
 
 ## Helper entities
@@ -73,4 +73,8 @@ The two metric summaries were displayed in the existing VPN section:
 - Backup: online, HTTP 204, RTT 367 ms, failures 0.
 - Both checks were stamped `2026-10-22 22:37:42`.
 
-The router-side publisher uses UCI staged values, not a flash commit on each update. The `passwall2-watchdog-publish-due` helper now limits publication in automatic mode to a randomized 180–300 second interval. HA's 30-second polling does not itself create a VPN probe; it reads the already-published summary. Manual mode also performs metrics-only checks every randomized 180–300 seconds. Automatic mode still probes both nodes each core cycle.
+The router-side publisher uses UCI staged values, not a flash commit on each update. The `passwall2-watchdog-publish-due` helper is intended to limit publication in automatic mode to a randomized 180–300 second interval. HA's 30-second polling does not itself create a VPN probe; it reads the already-published summary. Manual mode performs metrics-only checks every randomized 180–300 seconds. Automatic mode still probes both nodes each core cycle.
+
+## Latest post-fix metrics — 2026-10-23 16:10
+
+After fixing temporary test-port cache exhaustion in PassWall2's local test scripts, repeated primary/backup probes returned HTTP 204. The latest confirmed summaries showed primary online / RTT 313 ms / failures 0 and backup online / RTT 337 ms / failures 0. Keep the watchdog mode `primary` until longer stability and controlled failover/recovery are tested.
