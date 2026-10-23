@@ -127,3 +127,14 @@
 - Added a 600-second hold-down for ordinary backup-to-primary recovery; the core bypasses it after three consecutive backup failures when the primary is currently healthy.
 - Shell syntax checks passed for all changed live watchdog scripts. Metrics-only tests returned HTTP 204 for both nodes (primary about 293 ms, backup about 377 ms), each with `ok=3 fail=0`.
 - Current mode remains `primary` and route `PusiSLgE`. Automatic routing branches, long-run stability, and a controlled outage/recovery test are still not verified. Keep `auto` disabled for now.
+
+
+## 2026-10-24 — Home Assistant event push and Station quiet-hours setup
+
+- Updated the event helper reference to read the webhook URL from the locally installed wrapper at runtime. No active webhook ID/token is stored in this repository; placeholder URLs are explicitly rejected.
+- Aligned `passwall2-watchdog-node-state.sh` with the live state filename and the confirmed unavailable/restore transition behavior.
+- User returned `ha_watchdog.main.mode` to `auto`; subsequent supplied logs showed primary and backup HTTP 204, `ok=3 fail=0`, current/target `AnMllbuc`, and automatic-loop pauses around 9–15 seconds plus probe runtime.
+- User confirmed that webhook events update `input_text.passwall2_last_event` and `input_text.passwall2_last_event_id`, and that synthetic primary offline/online events delivered two push notifications to a Samsung A50 and PC. This was a handler/push test, not a real node outage or route-switch test.
+- Added documentation for Station announcement toggle and the 08:00–23:00 helper interval. TTS in the allowed window is not yet verified; a previously existing separate voice-notification automation may bypass the guard unless it receives the same conditions or is disabled.
+- Real controlled failover/recovery remains pending. This repository update did not modify the live router.
+
