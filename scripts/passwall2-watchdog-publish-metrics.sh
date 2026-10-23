@@ -10,6 +10,7 @@ B_FAIL="${6:-0}"
 
 P_DISPLAY="${P_RESULT:-no-response}"
 B_DISPLAY="${B_RESULT:-no-response}"
+CHECKED="$(date '+%Y-%m-%d %H:%M:%S')"
 
 case "$P_RESULT" in
     2[0-9][0-9]:*|3[0-9][0-9]:*)
@@ -29,15 +30,31 @@ case "$B_RESULT" in
         B_STATUS="online"
         B_HTTP="${B_RESULT%%:*}"
         B_RTT="$(echo "$B_RESULT" | awk -F: '{printf "%.0f", $2 * 1000}')"
+        B_CONFIGURED="yes"
+        B_SUMMARY="online | HTTP $B_HTTP | RTT $B_RTT ms | failures $B_FAIL | checked $CHECKED"
+        ;;
+    not-configured)
+        B_STATUS="not_configured"
+        B_HTTP="n/a"
+        B_RTT="unknown"
+        B_CONFIGURED="no"
+        B_SUMMARY="Резерв не настроен | подписка rezerv-stealthsurf не содержит узел | checked $CHECKED"
+        ;;
+    ambiguous)
+        B_STATUS="misconfigured"
+        B_HTTP="n/a"
+        B_RTT="unknown"
+        B_CONFIGURED="ambiguous"
+        B_SUMMARY="Ошибка резерва | в группе rezerv-stealthsurf несколько узлов | checked $CHECKED"
         ;;
     *)
         B_STATUS="offline"
         B_HTTP="no-response"
         B_RTT="unknown"
+        B_CONFIGURED="yes"
+        B_SUMMARY="offline | HTTP no-response | RTT unknown | failures $B_FAIL | checked $CHECKED"
         ;;
 esac
-
-CHECKED="$(date '+%Y-%m-%d %H:%M:%S')"
 
 # Discard accumulated staged telemetry before writing a fresh bounded snapshot.
 uci revert ha_watchdog_metrics
@@ -50,6 +67,7 @@ uci set "ha_watchdog_metrics.nodes.primary_checked_at=$CHECKED" || exit 1
 uci set "ha_watchdog_metrics.nodes.primary_http=$P_HTTP" || exit 1
 
 uci set "ha_watchdog_metrics.nodes.backup_result=$B_DISPLAY" || exit 1
+uci set "ha_watchdog_metrics.nodes.backup_configured=$B_CONFIGURED" || exit 1
 uci set "ha_watchdog_metrics.nodes.backup_ok=$B_STATUS" || exit 1
 uci set "ha_watchdog_metrics.nodes.backup_failures=$B_FAIL" || exit 1
 uci set "ha_watchdog_metrics.nodes.backup_rtt_ms=$B_RTT" || exit 1
@@ -58,4 +76,4 @@ uci set "ha_watchdog_metrics.nodes.backup_http=$B_HTTP" || exit 1
 
 uci set "ha_watchdog_metrics.nodes.last_check=$CHECKED" || exit 1
 uci set "ha_watchdog_metrics.nodes.primary_summary=$P_STATUS | HTTP $P_HTTP | RTT $P_RTT ms | failures $P_FAIL | checked $CHECKED" || exit 1
-uci set "ha_watchdog_metrics.nodes.backup_summary=$B_STATUS | HTTP $B_HTTP | RTT $B_RTT ms | failures $B_FAIL | checked $CHECKED" || exit 1
+uci set "ha_watchdog_metrics.nodes.backup_summary=$B_SUMMARY" || exit 1
