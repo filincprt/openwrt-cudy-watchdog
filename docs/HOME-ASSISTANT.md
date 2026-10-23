@@ -15,7 +15,7 @@ Sanitized reference updated 2026-10-23. No working webhook token is included.
 UCI configuration on router:
 - `ha_watchdog.main.mode`: `auto`, `primary`, `backup`, or `off`.
 - `ha_watchdog.main.status`: `primary`, `backup`, `manual_off`, `direct`, `offline`, or `unknown`.
-- Latest user-confirmed state on 2026-10-23: `ha_watchdog.main.mode=primary`, selected route `PusiSLgE`. Auto mode was disabled after repeated false failovers while node-test probes timed out; do not assume `auto` is currently active.
+- Latest confirmed state after the user re-enabled Auto: `ha_watchdog.main.mode=auto`; logs at 2026-10-23 23:35–23:41 showed both nodes HTTP 204, `fail=0`, current/target `AnMllbuc`. Older `mode=primary` lines predate this change. A controlled real outage/recovery test remains pending.
 - Wrapper webhook URL path is `/api/webhook/<REDACTED>`; do not copy the real token into this repository.
 
 ## Helper entities
@@ -78,3 +78,14 @@ The router-side publisher uses UCI staged values, not a flash commit on each upd
 ## Latest post-fix metrics — 2026-10-23 16:10
 
 After fixing temporary test-port cache exhaustion in PassWall2's local test scripts, repeated primary/backup probes returned HTTP 204. The latest confirmed summaries showed primary online / RTT 313 ms / failures 0 and backup online / RTT 337 ms / failures 0. Keep the watchdog mode `primary` until longer stability and controlled failover/recovery are tested.
+
+
+## Event push and Station quiet hours — 2026-10-24
+
+- Helpers holding the newest event are `input_text.passwall2_last_event` and `input_text.passwall2_last_event_id`.
+- The webhook automation reads `ha_watchdog.main.status`, `event_message`, and `event_id`; maps status to `input_select.passwall2_status`; updates the event helper; compares the incoming event ID with the stored ID to suppress duplicate pushes; and sends push to the Samsung A50 (`notify.mobile_app_sm_a505fn`) and PC (`notify.mobile_app_komputer`). The TECNO and second Samsung services are intentionally not targeted.
+- A synthetic node-state test called `passwall2-watchdog-node-state primary offline ...` then `online`; the user confirmed two push notifications arrived. This proves handler/webhook/HA/push delivery, **not** an actual probe failure or automatic route change.
+- The live event script extracts the webhook URL from the local `/usr/bin/passwall2-failover` wrapper at runtime. No active webhook token is committed to the repository.
+- Quiet-hours helpers in the live HA instance: `input_boolean.passwall2_station_announcements`, `input_datetime.asswall2_station_start_time` (the actual entity ID contains the typo `asswall2`), and `input_datetime.passwall2_station_end_time`. The user set 08:00–23:00 and enabled the toggle. A conditional `media_player.play_media` action with `media_content_type: text` was added to the router-webhook automation, targeting the Yandex Station entity above. TTS has not yet been tested during the allowed window.
+- **Important unresolved check:** the pre-existing `PassWall2 — голосовые уведомления` automation was not inspected/updated in this session. If it still speaks independently, it can bypass this quiet-hours guard. Before relying on overnight silence, ensure that automation is disabled or has the same toggle/time conditions.
+
