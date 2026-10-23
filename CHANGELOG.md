@@ -91,3 +91,13 @@
 - Added `README.ru.md` and a Russian documentation set under `docs/ru/` covering deployment, status, watchdog behavior, Home Assistant, diagnostics, backups/rollback, firewall/SSH, and AI handoff guidance.
 - Linked the Russian version from the top of the English README. Existing English files and paths remain available.
 - Kept commands, paths, UCI keys and node IDs unchanged in the translations so they remain copyable. Russian documentation is a translation/reference layer; live router state must still be rechecked before making changes.
+
+
+## 2026-10-23 — PassWall2 temporary test-port cache fix
+
+- Investigated test timeout exit code 124 while actual primary-route traffic still worked.
+- Trace found get_new_port() looping over cached ports 49150/49151 when the temporary-test cache was exhausted (256 keys for 48900–49151). Xray accepted the generated diagnostic JSON.
+- Backed up live test.sh, socks_auto_switch.sh and the runtime cache before changing anything.
+- Added cleanup of the allocated temporary-port cache key to both scripts; both passed sh -n. Removed only stale cache keys 48900–49151, preserving other keys.
+- Post-fix primary and backup probes returned HTTP 204; HA summaries showed both online with zero failures and RTT 325/369 ms. Port-key count remained four.
+- Mode remains primary. Long-run auto stability and controlled failover/recovery are not yet verified.
