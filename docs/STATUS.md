@@ -24,7 +24,7 @@ Last update: **2026-10-23**. This is a record of observed output, not a claim th
 | Primary recovery threshold | Three consecutive successful primary probes |
 | Manual-mode telemetry interval | Random 180–300 seconds after the loop change |
 | Auto-mode metric publication gate | Script connected to core and passed shell syntax checks; runtime interval still needs verification |
-| Home Assistant metrics | Latest snapshot at 2026-10-23 16:10:46: primary HTTP 204 / RTT 313 ms / 0 failures; backup HTTP 204 / RTT 337 ms / 0 failures |
+| Home Assistant metrics | Latest post-guard metrics check (2026-10-23): primary HTTP 204 / RTT 293 ms / `ok=3 fail=0`; backup HTTP 204 / RTT 377 ms / `ok=3 fail=0` |
 | Controlled outage test | Pending |
 
 The full cycle time is probe execution plus the pause. Two probes run sequentially; if either times out, the cycle may take longer. Do not equate a 5–15 second pause with a 5–15 second total cycle.
@@ -118,3 +118,14 @@ Cleanup completed: temporary diagnostic trace, diagnostic JSON and the old cache
 ## Additional guardrail identified before re-enabling auto — 2026-10-23
 
 The temporary-port cache fix currently calls `del_cache_var` on the normal cleanup path in `test.sh` and `socks_auto_switch.sh`. A remaining edge case needs handling: if the outer `/usr/bin/timeout -k 2 15` terminates `test.sh` before normal cleanup, the port-key cleanup line may be skipped. Before re-enabling automatic failover, inspect and add a safe signal/timeout cleanup path (without clearing unrelated cache keys), then validate both normal completion and an intentionally timed-out test. Protection work should then add one confirmation probe after a failed test and a recovery hold-down to reduce route flapping. No such watchdog protection has been deployed yet.
+
+
+## Protection update — 2026-10-23
+
+The earlier “Additional guardrail” section above records the state before protection was implemented; this section supersedes its pending-work status.
+
+- Live backups were created before the changes: core and metrics probe use `*.bak-before-probe-guard`; PassWall2 `test.sh` and `socks_auto_switch.sh` use `*.bak-before-timeout-cleanup`; the core also has `*.bak-before-cooldown`.
+- Live `/usr/share/passwall2/test.sh` now registers cleanup traps after allocating the test port. Cleanup terminates the temporary node-test process, removes its temporary files, and deletes only that probe's `get_port_<port>` cache entry. `sh -n` passed. An intentionally interrupted test returned timeout exit code 124; afterward no matching temporary files were found, and the cache showed only the unrelated `get_port_2001`–`get_port_2004` entries.
+- The live core and metrics-only probe now retry once after an unsuccessful probe, waiting 2 seconds. Both passed `sh -n`; the metrics-only checker ran successfully for both nodes: primary `204:0.292797`, backup `204:0.377022`, both `ok=3 fail=0`.
+- The core now has a 600-second hold-down before an ordinary return from backup to primary. It bypasses the hold-down after three consecutive backup failures when the primary probe is currently healthy. Syntax passed; this automatic routing branch has **not** been exercised in live failover because the selected mode remains `primary`.
+- Current selected route remains `PusiSLgE`; mode remains `primary`. Do not re-enable `auto` yet: retry-on-failure behavior, hold-down branch, long-run stability, and controlled failover/recovery still need safe runtime verification.
