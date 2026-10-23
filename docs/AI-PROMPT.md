@@ -53,3 +53,13 @@ Your first response should briefly summarize the current architecture and list t
 ## New protection caveat — 2026-10-23
 
 The port-cache fix was verified with repeated successful HTTP 204 probes and a stable cache count of four. However, the live PassWall2 scripts currently remove the temporary port key on the normal cleanup path; an external timeout may terminate `test.sh` before that cleanup line executes. Do not claim timeout-path cleanup is fully solved yet. Before re-enabling `auto`, inspect/add safe signal cleanup, test both normal and timeout paths, and then implement a one-time confirmation probe for failed tests plus a recovery hold-down to reduce rapid route reversals. Current mode last confirmed by the user is `primary` with route `PusiSLgE`.
+
+
+## Latest operational update — 2026-10-23
+
+The status sections above may contain older notes saying protection work is pending. Those notes are historical; use this newer state:
+
+- Live `/usr/share/passwall2/test.sh` has cleanup traps for the allocated temporary test port, associated test process, and temporary files. An intentionally interrupted probe returned timeout exit code 124 and left no matching temporary files; only unrelated `get_port_2001`–`get_port_2004` keys remained in the cache.
+- Both live watchdog scripts now retry a failed node test once after 2 seconds. The failover core additionally has a 600-second backup-to-primary recovery hold-down, bypassed after three consecutive backup failures when the current primary probe succeeds.
+- Syntax checks passed. Latest metrics-only probe returned HTTP 204 for both nodes (primary about 293 ms, backup about 377 ms, `ok=3 fail=0` each).
+- Live UCI mode remains `primary`, route remains `PusiSLgE`. Do not enable `auto` merely because syntax and current successful probes look good. Retry-on-failure and cooldown failover branches still require safe runtime verification, followed by a longer stability window and controlled failover/recovery test.
