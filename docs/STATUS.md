@@ -15,8 +15,9 @@ Last update: **2026-10-23**. This is a record of observed output, not a claim th
 
 | Item | Value / status |
 |---|---|
-| `ha_watchdog.main.mode` | `primary` — current user-selected mode after repeated false failovers; automatic routing is intentionally paused |
-| `passwall2.rulenode.default_node` | `PusiSLgE` — primary route confirmed at the same check |
+| `ha_watchdog.main.mode` | `auto` — automatic routing enabled |
+| `passwall2.rulenode.default_node` | `tLUhZHkw` — current Netherlands primary route after subscription refresh |
+| Primary resolver | `/usr/bin/passwall2-failover-resolve-primary`; requires exactly one imported node with `group=stealthsurf` |
 | Watchdog service | Reported `running` in the last service checks |
 | Probe timeout | `/usr/bin/timeout -k 2 15` in live core and metrics-only checker |
 | Auto loop pause | Random 5–15 seconds after each full cycle |
@@ -64,7 +65,7 @@ The core's metrics call was changed from `passwall2-watchdog-publish-metrics` to
 
 ## Node-ID and safety caveats
 
-The current reference scripts use hard-coded primary ID `PusiSLgE` and backup ID `fAk268mE`; direct routing is `_direct`. These are installation-specific and may change after subscription refresh. A route manually selected in LuCI can be overwritten by the watchdog. Dynamic role resolution is not implemented.
+The primary ID is resolved dynamically by `/usr/bin/passwall2-failover-resolve-primary` from exactly one imported node in group `stealthsurf`; it now resolves to `tLUhZHkw` (Netherlands). The backup remains the fixed ID `fAk268mE`, and direct routing is `_direct`. A future subscription refresh may change the primary ID again; if the group resolves to zero or multiple nodes, the resolver fails closed. A controlled node-outage/recovery test remains pending.
 
 The HTTP 204 probe only proves that the configured test request succeeded through the node at that moment. It does not guarantee all websites work and does not establish whether any particular failure is caused by external blocking.
 
@@ -129,3 +130,12 @@ The earlier “Additional guardrail” section above records the state before pr
 - The live core and metrics-only probe now retry once after an unsuccessful probe, waiting 2 seconds. Both passed `sh -n`; the metrics-only checker ran successfully for both nodes: primary `204:0.292797`, backup `204:0.377022`, both `ok=3 fail=0`.
 - The core now has a 600-second hold-down before an ordinary return from backup to primary. It bypasses the hold-down after three consecutive backup failures when the primary probe is currently healthy. Syntax passed; this automatic routing branch has **not** been exercised in live failover because the selected mode remains `primary`.
 - Current selected route remains `PusiSLgE`; mode remains `primary`. Do not re-enable `auto` yet: retry-on-failure behavior, hold-down branch, long-run stability, and controlled failover/recovery still need safe runtime verification.
+
+
+## Dynamic primary ID after subscription refresh — 2026-10-23
+
+- The primary subscription was changed first to Finland (`4m4hltgt`) and then to the Netherlands (`tLUhZHkw`). The helper `/usr/bin/passwall2-failover-resolve-primary` found the active imported node by `add_mode=2` and `group=stealthsurf`; no hard-coded primary ID remains in the three live watchdog scripts.
+- Core, metrics-only probe and wrapper were updated after backups were created; `sh -n` passed for all three, and the live resolver returned `tLUhZHkw`.
+- In `auto`, both primary and backup probes returned HTTP 204. After the 600-second recovery hold-down, the watchdog logged `Route changed: fAk268mE -> tLUhZHkw` at 20:50:59 on 2026-10-23. The user reports YouTube appears to load well on the Netherlands node; no numerical post-change speed was recorded.
+- Backup remains a fixed ID. The resolver intentionally requires exactly one imported node in `stealthsurf`; if that assumption changes, adjust it before refreshing into a multi-node group.
+- A controlled forced outage test is still pending; the observed recovery transition was not a deliberate outage simulation.
