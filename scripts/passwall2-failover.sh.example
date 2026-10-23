@@ -37,7 +37,8 @@ case "$MODE" in
         ;;
     primary)
         rm -f "$OFF_FLAG"
-        apply_node 'PusiSLgE' 'primary'
+        PRIMARY_NODE="$(/usr/bin/passwall2-failover-resolve-primary)" || exit 1
+        apply_node "$PRIMARY_NODE" 'primary'
         exit $?
         ;;
     backup)
@@ -61,8 +62,9 @@ P_FAIL="$(cat "$STATE_DIR/p_fail" 2>/dev/null)"
 B_FAIL="$(cat "$STATE_DIR/b_fail" 2>/dev/null)"
 case "$P_FAIL" in ''|*[!0-9]*) P_FAIL=0 ;; esac
 case "$B_FAIL" in ''|*[!0-9]*) B_FAIL=0 ;; esac
+PRIMARY_NODE="$(/usr/bin/passwall2-failover-resolve-primary 2>/dev/null)"
 case "$CURRENT" in
-    PusiSLgE) STATUS="primary" ;;
+    "$PRIMARY_NODE") STATUS="primary" ;;
     fAk268mE) STATUS="backup" ;;
     _direct)
         if [ "$P_FAIL" -ge 3 ] && [ "$B_FAIL" -ge 3 ]; then
