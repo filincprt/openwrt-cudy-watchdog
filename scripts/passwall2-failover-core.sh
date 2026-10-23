@@ -2,7 +2,6 @@
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 PRIMARY="$(/usr/bin/passwall2-failover-resolve-primary)" || exit 1
-BACKUP="fAk268mE"
 CONF="passwall2.rulenode.default_node"
 STATE="/tmp/passwall2-failover-state"
 LOCK="/tmp/passwall2-failover.lock"
@@ -10,6 +9,19 @@ LOCK="/tmp/passwall2-failover.lock"
 mkdir "$LOCK" 2>/dev/null || exit 0
 trap 'rmdir "$LOCK" 2>/dev/null' 0 1 2 15
 mkdir -p "$STATE"
+
+BACKUP="$(/usr/bin/passwall2-failover-resolve-backup 2>/dev/null)"
+BACKUP_RC=$?
+case "$BACKUP_RC" in
+    0) BACKUP_STATE="configured" ;;
+    2) BACKUP=""; BACKUP_STATE="not-configured" ;;
+    3) BACKUP=""; BACKUP_STATE="ambiguous" ;;
+    *)
+        logger -t passwall2-failover "Backup resolver failed with rc=$BACKUP_RC; refusing unsafe backup selection"
+        exit 1
+        ;;
+esac
+/usr/bin/passwall2-watchdog-backup-state "$BACKUP_STATE" || logger -t passwall2-failover "Could not publish backup state"
 
 read_count() {
     n="$(cat "$STATE/$1" 2>/dev/null)"
@@ -59,22 +71,42 @@ else
     p_fail="$(inc "$p_fail")"
 fi
 
-if probe "$BACKUP"; then
-    b_good=1
-    b_result="$PROBE_RESULT"
-    b_ok="$(inc "$b_ok")"
-    b_fail=0
+if [ -n "$BACKUP" ]; then
+    if probe "$BACKUP"; then
+        b_good=1
+        b_result="$PROBE_RESULT"
+        b_ok="$(inc "$b_ok")"
+        b_fail=0
+    else
+        b_good=0
+        b_result="$PROBE_RESULT"
+        b_ok=0
+        b_fail="$(inc "$b_fail")"
+    fi
 else
     b_good=0
-    b_result="$PROBE_RESULT"
+    b_result="$BACKUP_STATE"
     b_ok=0
-    b_fail="$(inc "$b_fail")"
+    b_fail=0
 fi
 
 echo "$p_ok" > "$STATE/p_ok"
 echo "$p_fail" > "$STATE/p_fail"
 echo "$b_ok" > "$STATE/b_ok"
 echo "$b_fail" > "$STATE/b_fail"
+
+if [ "$p_fail" -ge 3 ]; then
+    /usr/bin/passwall2-watchdog-node-state primary offline "Основной" || true
+else
+    /usr/bin/passwall2-watchdog-node-state primary online "Основной" || true
+fi
+if [ -n "$BACKUP" ]; then
+    if [ "$b_fail" -ge 3 ]; then
+        /usr/bin/passwall2-watchdog-node-state backup offline "Резервный" || true
+    else
+        /usr/bin/passwall2-watchdog-node-state backup online "Резервный" || true
+    fi
+fi
 
 /usr/bin/passwall2-watchdog-publish-due "$p_result" "$p_ok" "$p_fail" "$b_result" "$b_ok" "$b_fail"
 
@@ -84,9 +116,9 @@ desired="$current"
 case "$current" in
     "$PRIMARY")
         if [ "$p_fail" -ge 3 ]; then
-            if [ "$b_good" -eq 1 ]; then
+            if [ "$b_good" -eq 1 ] && [ -n "$BACKUP" ]; then
                 desired="$BACKUP"
-            elif [ "$b_fail" -ge 3 ]; then
+            elif [ -z "$BACKUP" ] || [ "$b_fail" -ge 3 ]; then
                 desired="_direct"
             fi
         fi
@@ -105,22 +137,22 @@ case "$current" in
     "_direct")
         if [ "$p_ok" -ge 3 ]; then
             desired="$PRIMARY"
-        elif [ "$b_ok" -ge 3 ]; then
+        elif [ -n "$BACKUP" ] && [ "$b_ok" -ge 3 ]; then
             desired="$BACKUP"
         fi
         ;;
     *)
         if [ "$p_good" -eq 1 ]; then
             desired="$PRIMARY"
-        elif [ "$p_fail" -ge 3 ] && [ "$b_good" -eq 1 ]; then
+        elif [ -n "$BACKUP" ] && [ "$p_fail" -ge 3 ] && [ "$b_good" -eq 1 ]; then
             desired="$BACKUP"
-        elif [ "$p_fail" -ge 3 ] && [ "$b_fail" -ge 3 ]; then
+        elif [ "$p_fail" -ge 3 ] && { [ -z "$BACKUP" ] || [ "$b_fail" -ge 3 ]; }; then
             desired="_direct"
         fi
         ;;
 esac
 
-if [ "$current" = "$BACKUP" ] && [ "$desired" = "$PRIMARY" ] && [ "$b_fail" -lt 3 ]; then
+if [ -n "$BACKUP" ] && [ "$current" = "$BACKUP" ] && [ "$desired" = "$PRIMARY" ] && [ "$b_fail" -lt 3 ]; then
     now="$(date +%s)"
     last_switch="$(cat "$STATE/last_switch_to_backup" 2>/dev/null)"
     case "$last_switch" in ""|*[!0-9]*) last_switch=0 ;; esac
@@ -145,11 +177,13 @@ if [ "$desired" != "$current" ]; then
 
     if ! /tmp/etc/passwall2/bin/xray run -test -config /tmp/etc/passwall2/acl/acl_default.json >/dev/null 2>&1; then
         logger -t passwall2-failover "Xray validation failed; restoring $current"
+        /usr/bin/passwall2-watchdog-event route_change_failed "Не удалось применить маршрут $desired; восстановлен $current." || true
         uci set "$CONF=$current"
         uci commit passwall2
         /etc/init.d/passwall2 restart
     else
         [ "$desired" = "$BACKUP" ] && date +%s > "$STATE/last_switch_to_backup"
         logger -t passwall2-failover "Route changed: $current -> $desired"
+        /usr/bin/passwall2-watchdog-event route_changed "Маршрут изменён: $current -> $desired." || true
     fi
 fi
