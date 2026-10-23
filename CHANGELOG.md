@@ -110,3 +110,12 @@
 - HA telemetry at 16:10:46 showed primary RTT 313 ms and backup RTT 337 ms, both online with zero failures. Runtime port-cache count stayed at 4.
 - Removed temporary trace / diagnostic JSON and the stale runtime cache backup after use. Kept the original pre-fix test scripts and important SSH/cron recovery copies.
 - Auto mode remains unverified after the fix; long-duration monitoring and controlled failover/recovery are still pending.
+
+
+## 2026-10-23 — interrupted-test cleanup and failover guardrails
+
+- Added signal/exit cleanup to the live PassWall2 `test.sh` for the allocated temporary port, associated process, and test files. An intentionally interrupted probe returned timeout code 124; afterwards no matching temporary files remained and only unrelated port-cache keys 2001–2004 were observed.
+- Added one retry after a failed probe, with a 2-second pause, to the reference failover core and metrics-only probe.
+- Added a 600-second hold-down for ordinary backup-to-primary recovery; the core bypasses it after three consecutive backup failures when the primary is currently healthy.
+- Shell syntax checks passed for all changed live watchdog scripts. Metrics-only tests returned HTTP 204 for both nodes (primary about 293 ms, backup about 377 ms), each with `ok=3 fail=0`.
+- Current mode remains `primary` and route `PusiSLgE`. Automatic routing branches, long-run stability, and a controlled outage/recovery test are still not verified. Keep `auto` disabled for now.
