@@ -113,3 +113,8 @@ Read-only router checks after the cache fix showed mode `primary`, route `PusiSL
 Logs show both metrics probes returning `no-response` with fail=3 at 15:44 and 15:48 (before the successful post-cleanup run sequence), followed by successful HTTP 204 checks for both nodes at 15:52, 15:56, 16:01, 16:05 and 16:10. This supports the temporary-port cache fix. It is a short observation window, not an overnight or controlled failover/recovery test. Keep mode `primary` until a longer stable window is observed.
 
 Cleanup completed: temporary diagnostic trace, diagnostic JSON and the old cache copy were removed after their diagnostic use. Keep the two `*.bak-before-port-cache-fix` script originals and the ordinary SSH/cron recovery copies until the fix is considered stable. The earlier pending-cleanup note is superseded by this observation.
+
+
+## Additional guardrail identified before re-enabling auto — 2026-10-23
+
+The temporary-port cache fix currently calls `del_cache_var` on the normal cleanup path in `test.sh` and `socks_auto_switch.sh`. A remaining edge case needs handling: if the outer `/usr/bin/timeout -k 2 15` terminates `test.sh` before normal cleanup, the port-key cleanup line may be skipped. Before re-enabling automatic failover, inspect and add a safe signal/timeout cleanup path (without clearing unrelated cache keys), then validate both normal completion and an intentionally timed-out test. Protection work should then add one confirmation probe after a failed test and a recovery hold-down to reduce route flapping. No such watchdog protection has been deployed yet.
