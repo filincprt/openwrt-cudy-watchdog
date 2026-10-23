@@ -80,15 +80,16 @@ Copy reviewed files to their intended live paths (only after comparing and adapt
 
 | Repository file | Live path |
 |---|---|
+| `scripts/passwall2-failover-resolve-primary.sh` | `/usr/bin/passwall2-failover-resolve-primary` |
 | `scripts/passwall2-failover-core.sh` | `/usr/bin/passwall2-failover-core` |
 | `scripts/passwall2-failover-loop.sh` | `/usr/bin/passwall2-failover-loop` |
 | `scripts/passwall2-failover-watchdog.init` | `/etc/init.d/passwall2-failover-watchdog` |
 | `scripts/passwall2-failover.sh.example` | `/usr/bin/passwall2-failover` after local adaptation |
 
-The metrics scripts are optional; install all three together only after checking their current snapshots and the publisher call path. Do not install an old snapshot over a newer live script blindly.
+The primary resolver is required by the core, wrapper and metrics-only probe in this version. Before installation, adapt `GROUP="stealthsurf"` in the resolver to the exact subscription-group value from your own PassWall2 node section. It fails closed unless exactly one imported node matches. The metrics scripts are optional; install all three together only after checking their current snapshots and the publisher call path. Do not install an old snapshot over a newer live script blindly.
 
 ```sh
-chmod 755 /usr/bin/passwall2-failover-core /usr/bin/passwall2-failover-loop /usr/bin/passwall2-failover
+chmod 755 /usr/bin/passwall2-failover-resolve-primary /usr/bin/passwall2-failover-core /usr/bin/passwall2-failover-loop /usr/bin/passwall2-failover
 chmod 755 /etc/init.d/passwall2-failover-watchdog
 sh -n /usr/bin/passwall2-failover-core
 sh -n /usr/bin/passwall2-failover
