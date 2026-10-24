@@ -1,5 +1,12 @@
 # История изменений
 
+## 2026-10-24 — план отдельной проверки YouTube по узлам
+
+- Подтверждено по установленному test.sh: url_test_node обращается к url_test_url; при пустой опции используется Google generate_204. Метрики primary и backup обе были HTTP 204, хотя на primary пользователь наблюдал сбой сервисов.
+- В PassWall2 LuCI есть вариант URL Test Address https://www.youtube.com/generate_204; постоянную опцию пока не меняли.
+- Добавлен docs/ru/PROBE-DIAGNOSTICS.md с планом изолированной проверки обоих узлов с временной копией test.sh и уникальными именами временного SOCKS/config, без изменения Auto/маршрута/UCI. План на роутере ещё не выполнялся.
+
+
 ## 2026-10-24 — Xray-exclude сохранён после reboot
 
 - После полной перезагрузки цепочки `inet zapret2 postnat_hook` и `prenat_hook` снова содержали все три пользовательских правила Xray-exclude. Hook persistence подтверждён.
