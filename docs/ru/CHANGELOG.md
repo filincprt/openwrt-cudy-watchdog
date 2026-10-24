@@ -1,5 +1,12 @@
 # История изменений
 
+## 2026-10-24 — наблюдение после reboot
+
+- После reboot zapret2 был running=true (PID 2053). При основном/Auto-доступе пользователь не смог открыть заблокированные сервисы; после ручного выбора режима «Резервный» через HA доступ восстановился.
+- Пользователь вернул режим Auto, последнее считанное состояние MODE=auto, ROUTE=AnMllbuc.
+- Причина не установлена. Следующий шаг — read-only проверка persistence Xray-exclude после reboot и диагностика healthchecks/logs watchdog. Никаких переключений узлов до анализа.
+
+
 ## 2026-10-24 — подтверждён повторный вызов Xray-exclude hook
 
 - По исходникам подтверждено: `custom_runner` загружает файлы из `/opt/zapret2/init.d/openwrt/custom.d`; `zapret_apply_firewall_rules_nft` вызывает `custom_runner zapret_custom_firewall_nft`.
