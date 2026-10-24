@@ -116,3 +116,11 @@
 
 В PassWall2 `/usr/share/passwall2/test.sh` функция `url_test_node` проверяет каждый конкретный узел через временный SOCKS5 запросом к `url_test_url`, default `https://www.google.com/generate_204`. HTTP 204 не является проверкой YouTube/video media. После reboot в Auto заблокированные сервисы у пользователя не работали, хотя primary/backup метрики обе показывали 204 и failures=0. Вероятный gap — узкий probe endpoint, но причина не доказана.
 Следующий шаг только read-only: `uci -q get 'passwall2.@global_other[0].url_test_url'` для фактического URL. Не менять настройки, маршрут или режим Auto до анализа.
+
+
+## Диагностика по YouTube — план готов, ещё не выполнялся
+
+- Фактический url_test_url не задан; установленный test.sh по умолчанию проверяет Google https://www.google.com/generate_204. Это объясняет, почему автоматический watchdog может считать узел online, хотя пользователь наблюдает недоступность YouTube. Причина ещё не доказана.
+- Официальная форма PassWall2 предлагает YouTube https://www.youtube.com/generate_204 для URL Test Address. Постоянное UCI-поле не менялось.
+- План безопасной изолированной проверки без маршрута/режима/UCI change записан в docs/ru/PROBE-DIAGNOSTICS.md. Он делает временную копию /usr/share/passwall2/test.sh, меняет только URL fallback на YouTube generate_204 и префикс имен временного SOCKS/config на url_test_yt_, затем проверяет AnMllbuc и fAk268mE по отдельности. Сначала выполнить подготовительную проверку sh -n и grep указанного в документе содержимого. Эти команды ещё НЕ запускались на устройстве.
+- Не переключать Auto, не менять маршрут, не менять постоянный url_test_url до получения результатов двух изолированных проб.
