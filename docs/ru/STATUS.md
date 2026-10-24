@@ -169,3 +169,9 @@ Read-only-проверка роутера показала режим `primary`,
 После полной перезагрузки пользователь повторно проверил обе цепочки. `postnat_hook` содержит tag Xray (handle 40), exclude Xray (handle 39), штатный jump (handle 32); `prenat_hook` содержит exclude replies (handle 41), штатный jump (handle 36). Hook и все три правила восстановились при загрузке. См. [SESSION-2026-10-24.md](SESSION-2026-10-24.md).
 
 Отдельно остаётся проблема: при основном/Auto-пути после reboot заблокированные сервисы не открывались, ручной выбор «Резервный» в HA восстановил доступ. Пользователь вернул Auto; последний считанный маршрут `AnMllbuc`. Причина неизвестна. Следующее — read-only диагностировать watchdog/health metrics и логи, без изменения маршрута и режима.
+
+
+## Диагностика Auto после reboot: probe проверяет один URL — 2026-10-24
+
+В `/usr/share/passwall2/test.sh`, функции `url_test_node`, проверяемый узел получает временный SOCKS5, а curl обращается к `url_test_url` с fallback по умолчанию `https://www.google.com/generate_204`. Поэтому HTTP 204 подтверждает лишь успешность этого URL; он не доказывает доступность YouTube, chatgpt.com и медиадоменов googlevideo.com. Метрики 17:42:53 показывали primary HTTP 204 / 346 ms / failures 0 и backup HTTP 204 / 316 ms / failures 0, хотя пользователь сообщил о недоступности сервисов по primary.
+Следующий безопасный шаг: read-only выяснить фактический `passwall2.@global_other[0].url_test_url`; не менять маршрут и не подменять URL проверки до согласования. См. [SESSION-2026-10-24.md](SESSION-2026-10-24.md).
