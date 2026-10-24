@@ -9,6 +9,7 @@
 - [Диагностика](DIAGNOSTICS.md)
 - [Резервные копии и откат](BACKUPS.md)
 - [Firewall и SSH](FIREWALL.md)
+- [zapret2 и разделение с PassWall2](ZAPRET2.md)
 - [История изменений](CHANGELOG.md)
 - [Промпт для другой ИИ](AI-PROMPT.md)
 
