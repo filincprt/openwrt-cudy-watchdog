@@ -1,5 +1,19 @@
 # История изменений
 
+## 2026-10-24 — установка zapret2 и проверка разделения с PassWall2
+
+- Установлен `zapret2` в `/opt/zapret2`; `nfqws2 v1.0.6` запущен через procd/init.d.
+- Выбраны `MODE_FILTER=hostlist`, TCP 80/443, UDP 443, IPv6 support off, `FLOWOFFLOAD=donttouch`.
+- После первоначального curl timeout штатный `get_antizapret_domains.sh` прошёл успешно: список `zapret-hosts.txt.gz`, gzip valid, 130898 строк. Конфигурация живого процесса содержит user hostlist, downloaded hostlist и user exclude.
+- Пользователь подтвердил работу сайтов с компьютера и телефона.
+- Добавлен `/opt/zapret2/init.d/openwrt/custom.d/40-passwall2-xray-exclude.sh`: Xray outbound (метка low byte `0xff`) получает conntrack bit `0x01000000`, такие соединения возвращаются до desync в postnat/prenat. Наличие правил в runtime nftables подтверждено; счётчики и устойчивость после firewall restart/reboot ещё не проверены.
+- Официальный upstream `bol-van/zapret2/master` на момент проверки указывает SHA `4a33055448ce5f4e7acc704e1fbe0d8a8a6aa08d` (`nfqws2: fix UAF`, 2026-10-22). Текущий бинарник сообщает родительский SHA `221d7dff24bfec0cd5ac0a5070b8acef2008af3d`; бинарник не обновляли.
+- Свежий `ubus call system board` сообщает `cudy,wr3000s-v1`, тогда как прежние заметки указывают V2. Расхождение ревизии не решено.
+- Уборку старых резервных копий не выполнять вслепую: сначала read-only inventory, затем архив/проверка и только потом удаление дубликатов. Следующий шаг — инвентаризация backup-файлов, не обновление стратегий или бинарника.
+
+---
+
+
 Это русская версия журнала изменений. Живое состояние и детали отдельных этапов сверяйте с оригинальным [CHANGELOG.md](../../CHANGELOG.md).
 
 ## 2026-10-23 — автоопределение основного ID после обновления подписки
