@@ -111,3 +111,8 @@
 
 - После полной перезагрузки обе nft chains были проверены. Xray-exclude rules присутствуют: postnat tag handle 40, postnat exclude handle 39, штатный postnat jump handle 32; prenat replies exclude handle 41, штатный prenat jump handle 36. Persistence custom hook после reboot подтверждён.
 - Независимая проблема: после reboot заблокированные сервисы не открывались при Auto/основном маршруте; ручной выбор Backup через HA восстановил доступ. Пользователь вернул Auto; последнее MODE=auto, ROUTE=AnMllbuc. zapret2 running=true после reboot. Не делать вывод, что причина в zapret2; следующий шаг — read-only диагностика watchdog и health metrics/логов, не меняя маршрут.
+
+## Диагностика Auto после reboot — свежий результат 2026-10-24
+
+В PassWall2 `/usr/share/passwall2/test.sh` функция `url_test_node` проверяет каждый конкретный узел через временный SOCKS5 запросом к `url_test_url`, default `https://www.google.com/generate_204`. HTTP 204 не является проверкой YouTube/video media. После reboot в Auto заблокированные сервисы у пользователя не работали, хотя primary/backup метрики обе показывали 204 и failures=0. Вероятный gap — узкий probe endpoint, но причина не доказана.
+Следующий шаг только read-only: `uci -q get 'passwall2.@global_other[0].url_test_url'` для фактического URL. Не менять настройки, маршрут или режим Auto до анализа.
