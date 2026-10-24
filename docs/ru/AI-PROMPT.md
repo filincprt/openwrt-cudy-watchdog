@@ -96,3 +96,12 @@
 - Текущий hook использует socket mark low byte 0xff, проставляет conntrack bit 0x01000000, а помеченные соединения возвращает до desync. Runtime order ранее был корректным, но в rules не было счётчиков и persistence не подтверждён.
 - Две копии /root/zapret2-config-before-split-20261024-151206 и /root/zapret2-config.backup-20261024-144355 не сравнены (пользователь получил «Не найдено» от команды diff); не удалять ни одну. /root/zapret2-custom-before-split-20261024-151206 содержит только пустой .keep. Сохранить /root/zapret2-preinstall-backup и /root/passwall2.backup-2026-10-21.
 - Один шаг за раз; вставка многострочных команд иногда ломается в терминале.
+
+
+## Самое свежее состояние — 2026-10-24: Xray-exclude restart test
+
+- Custom hook /opt/zapret2/init.d/openwrt/custom.d/40-passwall2-xray-exclude.sh подтверждён исходниками загрузчика: ZAPRET_BASE=/opt/zapret2; custom_runner обходится по файлам CUSTOM_DIR/custom.d/*; nft.sh вызывает custom_runner zapret_custom_firewall_nft.
+- До и после /etc/init.d/zapret2 restart состояние PassWall2 не изменилось: MODE=auto, ROUTE=AnMllbuc. zapret2 снова running=true, PID после перезапуска 10287.
+- После рестарта zapret2 Xray-exclude rules заново появились с новыми handle: postnat tag=75, postnat exclude=74, prenat replies exclude=76. Повторный вызов hook при zapret2 restart подтверждён.
+- Попытка /etc/init.d/firewall restart вывела "Section passwall2 option 'reload' is not supported by fw4"; правила остались на месте, но считать тест полного fw4 reload успешным нельзя. Не менять firewall config без отдельного анализа.
+- Следующее действие: read-only проверить автозапуск ссылками в /etc/rc.d для zapret2 и passwall2-failover-watchdog. Если оба включены и пользователь готов к краткому обрыву связи — провести reboot test; затем проверить MODE, ROUTE, службу zapret2, watchdog и три Xray-exclude правила. Reboot persistence ещё не подтверждён.
