@@ -12,4 +12,5 @@
 - [zapret2 и разделение с PassWall2](ZAPRET2.md)
 - [История изменений](CHANGELOG.md)
 - [Промпт для другой ИИ](AI-PROMPT.md)
+- [Снимок сессии 2026-10-24: архивы, FTP, Xray-exclude](SESSION-2026-10-24.md)
 
