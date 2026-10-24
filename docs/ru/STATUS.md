@@ -146,3 +146,14 @@ Read-only-проверка роутера показала режим `primary`,
 - В режиме `auto` проверки основного и резервного узлов вернули HTTP 204. После 600-секундной выдержки watchdog записал `Route changed: fAk268mE -> tLUhZHkw` в 20:50:59 23 октября 2026 года. По словам пользователя, YouTube на Нидерландах загружается лучше; числовая скорость после смены не зафиксирована.
 - ID резерва пока фиксирован. Резолвер намеренно требует ровно один импортированный узел в `stealthsurf`; если подписка начнёт возвращать несколько узлов этой группы, перед дальнейшим обновлением нужно уточнить правило выбора.
 - Контролируемый принудительный тест отказа/восстановления ещё не проводился; наблюдавшийся переход обратно на основной не был симуляцией аварии.
+
+
+## Проверка повторного применения Xray-exclude — 2026-10-24 (новейший результат)
+
+- `ha_watchdog.main.mode=auto`, `passwall2.rulenode.default_node=AnMllbuc`; zapret2 и PassWall2 watchdog до теста работали.
+- Исходники подтверждают подключение `/opt/zapret2/init.d/openwrt/custom.d/40-passwall2-xray-exclude.sh`: `CUSTOM_DIR=/opt/zapret2/init.d/openwrt`, `custom_runner` загружает файлы `custom.d/*`, а `zapret_apply_firewall_rules_nft` вызывает `custom_runner zapret_custom_firewall_nft`.
+- `/etc/init.d/firewall restart` выдал `Section passwall2 option 'reload' is not supported by fw4`. Правила остались видны, но повторное применение hook через fw4 НЕ подтверждено; разобраться отдельно, не менять firewall config вслепую.
+- `/etc/init.d/zapret2 restart` прошёл: firewall zapret2 был очищен, `nfqws2` стартовал заново, правила NFQUEUE созданы. Все три пользовательских правила Xray-exclude появились снова с новыми handle (75, 74, 76), подтверждая повторный вызов hook при рестарте zapret2.
+- После теста сохранились `MODE=auto`, `ROUTE=AnMllbuc`; zapret2 running=true (PID 10287). PassWall2 Auto и маршрут вручную не менялись.
+- **Не проверено:** включение автозапуска ссылками `/etc/rc.d` и сохранение правил после reboot. Следующий шаг — read-only проверить автозапуск zapret2/watchdog, затем при штатной конфигурации провести reboot test и перепроверить режим, маршрут, службы и пользовательские правила. Подробности: [SESSION-2026-10-24.md](SESSION-2026-10-24.md).
+
