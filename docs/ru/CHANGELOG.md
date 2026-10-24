@@ -1,5 +1,14 @@
 # История изменений
 
+## 2026-10-24 — подтверждён повторный вызов Xray-exclude hook
+
+- По исходникам подтверждено: `custom_runner` загружает файлы из `/opt/zapret2/init.d/openwrt/custom.d`; `zapret_apply_firewall_rules_nft` вызывает `custom_runner zapret_custom_firewall_nft`.
+- `/etc/init.d/zapret2 restart` очистил и создал nftables заново; затем все три пользовательских Xray-exclude правила вернулись с новыми handle 75/74/76. Это подтверждает применение hook при рестарте zapret2.
+- До и после теста PassWall2 оставался в `auto`, маршрут `AnMllbuc`; `zapret2` снова `running=true`.
+- `/etc/init.d/firewall restart` выдал предупреждение `Section passwall2 option 'reload' is not supported by fw4`; считать тест fw4 незавершённым.
+- Следующая проверка — автозапуск обеих служб и реальная сохранность правил после reboot. Не проводить без предварительной проверки ссылок автозапуска.
+
+
 ## 2026-10-24 — уборка исторических копий и подтверждение FTP-архива
 
 - Исторические копии watchdog/PassWall2 и старые копии cron/Dropbear были включены в /root/passwall2-history-20261024.tar.gz; архив прошёл gzip -t и проверку содержимого до удаления исторических копий.
