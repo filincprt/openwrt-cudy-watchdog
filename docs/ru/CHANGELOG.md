@@ -1,5 +1,15 @@
 # История изменений
 
+## 2026-10-24 — уборка исторических копий и подтверждение FTP-архива
+
+- Исторические копии watchdog/PassWall2 и старые копии cron/Dropbear были включены в /root/passwall2-history-20261024.tar.gz; архив прошёл gzip -t и проверку содержимого до удаления исторических копий.
+- Архив загружен в FTP 192.168.1.1/OpenWrt-Backups/passwall2-history-20261024.tar.gz, скачан обратно, сравнен с исходником через cmp и проверен gzip -t: BACKUP_VERIFIED_OK.
+- Активные watchdog-скрипты, PassWall2 Auto, zapret2 config/binary/hostlists и Xray-exclude custom hook не изменялись. Исходный /root/zapret2-preinstall-backup сохранён.
+- FTP password оказался виден в выводе/переписке, ротация и удаление /tmp/ftp.netrc ещё ожидают выполнения. Секрет в репозитории не хранить.
+- Следующий приоритет по запросу пользователя — read-only проверка загрузки 40-passwall2-xray-exclude.sh и сохранения правил после firewall restart; сначала зафиксировать текущий PassWall2 mode/route и службы. PassWall2 Auto не трогать.
+- Две копии конфигурации zapret2 пока не сравнены из-за сбоя команды diff; не удалять.
+
+
 ## 2026-10-24 — установка zapret2 и проверка разделения с PassWall2
 
 - Установлен `zapret2` в `/opt/zapret2`; `nfqws2 v1.0.6` запущен через procd/init.d.
